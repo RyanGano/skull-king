@@ -7,15 +7,15 @@ public class GameIdTests
     [Fact]
     public void CanGetNewGameId()
     {
-        var gameId = GameIdUtility.GetValidGameId();
-        Assert.NotNull(gameId);
+        var gameId = new GameId();
+        Assert.NotNull(gameId.Value);
     }
 
     [Fact]
     public void GameIdIsLengthOfFour()
     {
-        var gameId = GameIdUtility.GetValidGameId();
-        Assert.Equal(4, gameId.Length);
+        var gameId = new GameId();
+        Assert.Equal(4, gameId.Value.Length);
     }
 
     [Theory]
@@ -26,9 +26,9 @@ public class GameIdTests
     [InlineData("I1i1", "1111")]
     public void GameIdConvertsToValidCharacters(string input, string output)
     {
-        var gameId = GameIdUtility.GetValidGameId(input);
+        var gameId = new GameId(input);
 
-        Assert.Equal(output, gameId);
+        Assert.Equal(output, gameId.Value);
     }
 
     [Theory]
@@ -36,7 +36,7 @@ public class GameIdTests
     [InlineData("Ad#")]
     public void InvalidGameIdThrowsException(string input)
     {
-        Assert.ThrowsAny<Exception>(() => GameIdUtility.GetValidGameId(input));
+        Assert.ThrowsAny<Exception>(() => new GameId(input));
     }
 
     [Fact]
@@ -44,11 +44,21 @@ public class GameIdTests
     {
         for (int i = 0; i < 100_000; i++)
         {
-            var gameId = GameIdUtility.GetValidGameId();
+            var gameId = new GameId();
 
-            var normalizedId = GameIdUtility.GetValidGameId(gameId);
+            var normalizedId = new GameId(gameId.Value);
 
-            Assert.Matches(gameId, normalizedId);
+            Assert.Equal(gameId, normalizedId);
         }
+    }
+
+    [Fact]
+    public void GameIdFromAnotherGameIdIsEqualButNotSame()
+    {
+        var gameId = new GameId();
+        var gameIdCopy = new GameId(gameId);
+
+        Assert.Equal(gameId, gameIdCopy);
+        Assert.NotSame(gameId, gameIdCopy);
     }
 }

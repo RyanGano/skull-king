@@ -1,14 +1,22 @@
 using System.Text.RegularExpressions;
 
-public static class GameIdUtility
+public record GameId
 {
-  public static string GetValidGameId(string? gameId = null)
+  public GameId() : this(Path.GetRandomFileName())
   {
-    if (gameId is null)
-      return NormalizeGameId(Path.GetRandomFileName());
-
-    return NormalizeGameId(gameId);
   }
+
+  public GameId(string id)
+  {
+    Value = NormalizeGameId(id);
+  }
+
+  public GameId(GameId gameId)
+  {
+    Value = gameId.Value;
+  }
+
+  public string Value { get; init; }
 
   private static string NormalizeGameId(string input)
   {
