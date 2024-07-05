@@ -8,7 +8,7 @@ public class GameTests
     var game = Game.Create("Ryan");
 
     Assert.NotNull(game);
-    Assert.Equal(new List<string> { "Ryan" }, game.Players);
+    Assert.True(game.Players.Single() is Player { Name: "Ryan", Id: { } });
     Assert.NotNull(game.Id);
   }
 
@@ -16,46 +16,56 @@ public class GameTests
   public void CanAddPlayerToGame()
   {
     var game = Game.Create("Ryan");
+    var controllingPlayer = game.Players.First();
 
-    game.AddPlayer("Bob");
+    var newPlayer = new Player("Bob");
+    game.AddPlayer(newPlayer);
 
-    Assert.Equal(new List<string> { "Ryan", "Bob" }, game.Players);
+    Assert.Equal(new List<Player> { controllingPlayer, newPlayer }, game.Players);
   }
 
   [Fact]
   public void CannotAddExistingPlayerToGame()
   {
     var game = Game.Create("Ryan");
+    var controllingPlayer = game.Players.First();
 
-    Assert.Throws<ArgumentException>(() => game.AddPlayer("Ryan"));
+    Assert.Throws<ArgumentException>(() => game.AddPlayer(controllingPlayer));
   }
 
   [Fact]
   public void CanRemovePlayerFromGame()
   {
     var game = Game.Create("Ryan");
-    game.AddPlayer("Bob");
+    var controllingPlayer = game.Players.First();
+    var newPlayer = new Player("Bob");
+    game.AddPlayer(newPlayer);
 
-    game.RemovePlayer("Bob");
+    game.RemovePlayer(newPlayer);
 
-    Assert.Equal(new List<string> { "Ryan" }, game.Players);
+    Assert.Equal(new List<Player> { controllingPlayer }, game.Players);
   }
 
   [Fact]
   public void CannotRemoveNonExistentPlayerFromGame()
   {
     var game = Game.Create("Ryan");
-    game.AddPlayer("Bob");
+    var newPlayer = new Player("Bob");
+    game.AddPlayer(newPlayer);
 
-    Assert.Throws<ArgumentException>(() => game.RemovePlayer("Bob2"));
+    var nonExistentPlayer = new Player("Bob2");
+
+    Assert.Throws<ArgumentException>(() => game.RemovePlayer(nonExistentPlayer));
   }
 
   [Fact]
   public void CannotRemoveFirstPlayerFromGame()
   {
     var game = Game.Create("Ryan");
-    game.AddPlayer("Bob");
+    var controllingPlayer = game.Players.First();
+    var newPlayer = new Player("Bob");
+    game.AddPlayer(newPlayer);
 
-    Assert.Throws<ArgumentException>(() => game.RemovePlayer("Ryan"));
+    Assert.Throws<ArgumentException>(() => game.RemovePlayer(controllingPlayer));
   }
 }

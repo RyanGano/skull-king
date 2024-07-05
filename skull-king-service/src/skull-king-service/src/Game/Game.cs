@@ -1,38 +1,38 @@
 public record Game
 {
   public GameId Id { get; init; }
-  public IReadOnlyList<string> Players => EditablePlayers;
+  public IReadOnlyList<Player> Players => EditablePlayers;
 
   public static Game Create(string controllingPlayerName)
   {
-    return new Game(new GameId(), new List<string> { controllingPlayerName });
+    return new Game(new GameId(), new List<Player> { new Player(controllingPlayerName) });
   }
 
-  public void AddPlayer(string playerName)
+  public void AddPlayer(Player player)
   {
-    if (Players.Contains(playerName))
+    if (Players.Contains(player))
       throw new ArgumentException("Player already in game");
 
-    EditablePlayers.Add(playerName);
+    EditablePlayers.Add(player);
   }
 
-  public void RemovePlayer(string playerName)
+  public void RemovePlayer(Player player)
   {
-    var indexOfPlayer = EditablePlayers.IndexOf(playerName);
+    var indexOfPlayer = EditablePlayers.IndexOf(player);
     if (indexOfPlayer == -1)
       throw new ArgumentException("Player not found");
     if (indexOfPlayer == 0)
       throw new ArgumentException("Cannot remove first player");
 
-    EditablePlayers.Remove(playerName);
+    EditablePlayers.Remove(player);
   }
 
-  private Game(GameId id, List<string> players)
+  private Game(GameId id, List<Player> players)
   {
     Id = id;
     EditablePlayers = players;
   }
 
-  private List<string> EditablePlayers { get; init; }
+  private List<Player> EditablePlayers { get; init; }
 
 }
