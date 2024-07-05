@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace skull_king_service.tests;
 
 public class GameIdTests
