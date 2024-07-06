@@ -112,6 +112,18 @@ public class RoundTests
   }
 
   [Fact]
+  public void CanSetBonusToZeroWithNoBid()
+  {
+    var round = new Round(5);
+
+    var updatedRound = round.WithBonus(0);
+
+    Assert.NotNull(updatedRound);
+    Assert.Equal(0, updatedRound.Bonus);
+    Assert.Equal(round.Id, updatedRound.Id);
+  }
+
+  [Fact]
   public void ThrowsOnWithBonusNoBid()
   {
     var round = new Round(5);
@@ -125,5 +137,31 @@ public class RoundTests
     var round = new Round(5).WithBid(3).WithTricksTaken(4);
 
     Assert.Throws<ArgumentException>(() => round.WithBonus(20));
+  }
+
+  [Fact]
+  public void CanSetBonusToZeroWithNoTricksTaken()
+  {
+    var round = new Round(5).WithBid(3); ;
+
+    var updatedRound = round.WithBonus(0);
+
+    Assert.NotNull(updatedRound);
+    Assert.Equal(0, updatedRound.Bonus);
+    Assert.Equal(round.Id, updatedRound.Id);
+  }
+
+  [Theory]
+  [InlineData(1, 0, 0, -10)]
+  [InlineData(1, 1, 0, 20)]
+  [InlineData(0, 0, 20, 110)]
+  [InlineData(0, 1, 0, -90)]
+  [InlineData(4, 1, 0, -30)]
+  [InlineData(7, 7, 50, 190)]
+  public void ScoreIsCorrect(int bid, int tricksTaken, int bonus, int expected)
+  {
+    var round = new Round(9).WithBid(bid).WithTricksTaken(tricksTaken).WithBonus(bonus);
+
+    Assert.Equal(expected, round.GetScore());
   }
 }

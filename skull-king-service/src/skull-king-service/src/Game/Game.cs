@@ -2,16 +2,20 @@ public record Game
 {
   public GameId Id { get; init; }
   public IReadOnlyList<Player> Players => EditablePlayers;
+  public GameStatus Status { get; private set; }
+  public IReadOnlyList<RoundInfo> RoundInfos => EditableRoundInfos;
 
-  public static Game Create(string controllingPlayerName)
+  public static Game Create(Player controllingPlayer)
   {
-    return new Game(new GameId(), new List<Player> { new Player(controllingPlayerName) });
+    return new Game(new GameId(), new List<Player> { controllingPlayer });
   }
 
   public void AddPlayer(Player player)
   {
     if (Players.Contains(player))
       throw new ArgumentException("Player already in game");
+    if (Players.Count == c_maxPlayers)
+      throw new ArgumentException($"Cannot have more than {c_maxPlayers} in a game.");
 
     EditablePlayers.Add(player);
   }
@@ -27,12 +31,28 @@ public record Game
     EditablePlayers.Remove(player);
   }
 
+  public void StartGame()
+  {
+    if (Players.Count < c_minPlayers)
+      throw new InvalidOperationException("Cannot start game with less than 2 players");
+
+    Status = GameStatus.BiddingOpen;
+    EditableRoundInfos.Add(new RoundInfo(Players, 1));
+  }
+
+  public override int GetHashCode()
+  => HashCode.Combine(Id, HashUtility.CombineHashCodes(Players), Status, HashUtility.CombineHashCodes(RoundInfos));
+
   private Game(GameId id, List<Player> players)
   {
     Id = id;
     EditablePlayers = players;
+    EditableRoundInfos = new List<RoundInfo>();
+    Status = GameStatus.AcceptingPlayers;
   }
 
+  private const int c_minPlayers = 2;
+  private const int c_maxPlayers = 8;
   private List<Player> EditablePlayers { get; init; }
-
+  private List<RoundInfo> EditableRoundInfos { get; init; }
 }

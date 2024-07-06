@@ -30,14 +30,32 @@ public record Round
 
   public Round WithBonus(int bonus)
   {
-    if (Bid is null)
-      throw new ArgumentException("Cannot set tricks taken without a bid");
-    if (Bid != TricksTaken)
-      throw new ArgumentException("Cannot set bonus without matching bid and tricks taken");
-    if (bonus < 0 || bonus % 10 != 0)
-      throw new ArgumentException("Bonus must be between a positive multiple of 10");
+    if (bonus != 0)
+    {
+      if (Bid is null)
+        throw new ArgumentException("Cannot set tricks taken without a bid");
+      if (Bid != TricksTaken)
+        throw new ArgumentException("Cannot set bonus without matching bid and tricks taken");
+      if (bonus < 0 || bonus % 10 != 0)
+        throw new ArgumentException("Bonus must be between a positive multiple of 10");
+    }
 
     return this with { Bonus = bonus };
+  }
+
+  public int GetScore()
+  {
+    var bid = Bid ?? 0;
+    var tricksTaken = TricksTaken ?? 0;
+    var bonus = Bonus ?? 0;
+
+    return bid != tricksTaken
+      ? bid != 0
+        ? -Math.Abs(bid - tricksTaken) * 10
+        : -MaxBid * 10
+      : bid != 0
+        ? bid * 20 + bonus
+        : MaxBid * 10 + bonus;
   }
 
   public Guid Id { get; init; } = Guid.NewGuid();
