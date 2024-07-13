@@ -7,7 +7,7 @@ public class PlayerRoundTests
   {
     var player = new Player("Ryan");
     var round = new Round(2);
-    var playerRound = new PlayerRound(player, round);
+    var playerRound = PlayerRound.Create(player, round);
 
     Assert.NotNull(playerRound);
     Assert.Equal(player, playerRound.Player);

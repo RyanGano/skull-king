@@ -22,6 +22,15 @@ public record RoundInfo
     };
   }
 
+  internal RoundInfoDto MapToDto()
+  {
+    return new RoundInfoDto
+    {
+      Id = Id,
+      PlayerRounds = PlayerRounds!.Select(x => x.MapToDto()).ToList()
+    };
+  }
+
   public RoundInfo()
   {
   }

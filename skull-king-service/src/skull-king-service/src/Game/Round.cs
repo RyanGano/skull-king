@@ -58,6 +58,18 @@ public record Round
         : MaxBid * 10 + bonus;
   }
 
+  internal RoundDto MapToDto()
+  {
+    return new RoundDto
+    {
+      Id = Id,
+      MaxBid = MaxBid,
+      Bid = Bid,
+      TricksTaken = TricksTaken,
+      Bonus = Bonus
+    };
+  }
+
   public Guid Id { get; init; } = Guid.NewGuid();
   public int MaxBid { get; init; }
   public int? Bid { get; init; }

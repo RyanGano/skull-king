@@ -15,6 +15,16 @@ public record Game
     };
   }
 
+  public static Game Create(GameId gameId, Player controllingPlayer)
+  {
+    return new Game
+    {
+      Id = gameId.Value,
+      EditablePlayers = new List<Player> { controllingPlayer },
+      EditableRoundInfos = new List<RoundInfo>()
+    };
+  }
+
   public void AddPlayer(Player player)
   {
     if (Players.Contains(player))
@@ -47,6 +57,17 @@ public record Game
 
   public override int GetHashCode()
   => HashCode.Combine(Id, HashUtility.CombineHashCodes(Players), Status, HashUtility.CombineHashCodes(RoundInfos));
+
+  internal GameDto MapToDto()
+  {
+    return new GameDto
+    {
+      Id = Id,
+      Players = Players.Select(x => x.MapToDto()).ToList(),
+      Status = Status,
+      RoundInfos = RoundInfos.Select(x => x.MapToDto()).ToList()
+    };
+  }
 
   private Game()
   {

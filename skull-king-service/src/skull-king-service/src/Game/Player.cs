@@ -8,7 +8,16 @@ public record Player
     Name = newName;
   }
 
-  public Player(string name)
+    internal PlayerDto MapToDto()
+    {
+        return new PlayerDto
+        {
+            Id = Id,
+            Name = Name
+        };
+    }
+
+    public Player(string name)
   {
     Name = name;
   }

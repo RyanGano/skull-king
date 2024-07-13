@@ -94,7 +94,7 @@ public class GameTests
     game.StartGame();
 
     Assert.True(game.RoundInfos.Count == 1);
-    Assert.Equal(1, game.RoundInfos.First().PlayerRounds.Select(x => x.Round.MaxBid).Distinct().Single());
+    Assert.Equal(1, game.RoundInfos.First().PlayerRounds!.Select(x => x.Round!.MaxBid).Distinct().Single());
     Assert.Equal(GameStatus.BiddingOpen, game.Status);
   }
 

@@ -1,45 +1,38 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.VisualBasic;
+
+var AllowSkullKingApp = "_allowSkullKingApp";
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<SkullKingDbContext>(options =>
     options.UseInMemoryDatabase("SkullKingInMemoryDb"));
 
+SetupCors(AllowSkullKingApp, builder);
+
 var app = builder.Build();
+app.UseCors();
 
-app.MapGet("/", (string? name, string? gameId, SkullKingDbContext db) =>
-{
-  if (name is not null)
-  {
-    var player = new Player(name ?? "[unknown]");
-    var game = Game.Create(player);
-    db.Games.Add(game);
-    db.Players.Add(player);
-    db.SaveChanges();
+GameRoutes.Register(app, AllowSkullKingApp);
 
-    var playerCount = db.Games.Find(game.Id)?.Players.Count;
-
-    return $"Starting game '{game.Id}' - {playerCount}";
-  }
-  if (gameId is not null)
-  {
-    var game = db.Games.Include(g => g.Players).Where(x => x.Id == gameId).FirstOrDefault();
-    if (game is null)
-      return $"Game '{gameId}' not found";
-
-    var newPlayer = new Player("Player 2");
-    game.AddPlayer(newPlayer);
-    db.Games.Update(game);
-    db.Players.Add(newPlayer);
-    db.SaveChanges();
-
-    var newPlayerCount = db.Games.Find(game.Id)?.Players.Count;
-
-    return $"Starting game '{game.Id}' - {newPlayerCount}";
-  }
-
-  return "nothing here";
-});
+app.MapGet("/", () => "Skull King Api");
 
 app.Run();
+
+static void SetupCors(string AllowSkullKingApp, WebApplicationBuilder builder)
+{
+  builder.Services.AddCors(options =>
+  {
+    options.AddPolicy(name: AllowSkullKingApp,
+          policy =>
+          {
+            policy.WithOrigins($"http://localhost:{Environment.GetEnvironmentVariable("PORT")}").AllowAnyMethod().AllowAnyHeader();
+          });
+    // options.AddPolicy(name: AllowSkullKingApp,
+    //       policy =>
+    //       {
+    //         policy.WithOrigins("https://green-stone-0b7a4a71e.3.azurestaticapps.net").AllowAnyMethod().AllowAnyHeader();
+    //       });
+  });
+}
+
+public partial class Program { }
