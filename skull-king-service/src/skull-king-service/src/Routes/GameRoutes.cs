@@ -11,6 +11,13 @@ public static class GameRoutes
         ? new GameId("ABCD")
         : new GameId();
 
+      var existingGame = await db.Games.Where(x => x.Id == gameId.Value).FirstOrDefaultAsync();
+      if (existingGame is not null)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
+        return;
+      }
+
       var game = Game.Create(gameId, new Player(gameInfo.PlayerName));
       db.Games.Add(game);
       await db.SaveChangesAsync();

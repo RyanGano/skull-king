@@ -21,7 +21,7 @@ public class GameRoutesTests : IClassFixture<TestFixture>
   [Theory]
   [InlineData("__Sample Game 1__", true)]
   [InlineData("Ryan", false)]
-  public async Task CreateGame_WithTestUser_HasTestId(string name, bool isTestGameId)
+  public async Task CreateGameWithTestUserHasTestId(string name, bool isTestGameId)
   {
     var newGameDto = new NewGameDto { PlayerName = name };
     var content = JsonContent.Create(newGameDto);
@@ -59,5 +59,16 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     Assert.NotNull(game);
     Assert.Equal("Test Player", game.Players.Single().Name);
     Assert.Equal(GameStatus.AcceptingPlayers, game.Status);
+  }
+
+  [Fact]
+  public async Task CannotCreateGameWithSameId()
+  {
+    var newGameDto = new NewGameDto { PlayerName = "__Sample Game 1__" };
+    var content = JsonContent.Create(newGameDto);
+    var response = await _client.PostAsync("/games", content);
+
+    response = await _client.PostAsync("/games", content);
+    Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
   }
 }
