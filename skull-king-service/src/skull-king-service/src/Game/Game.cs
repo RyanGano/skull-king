@@ -1,13 +1,18 @@
 public record Game
 {
-  public GameId Id { get; init; }
+  public required string Id { get; init; }
   public IReadOnlyList<Player> Players => EditablePlayers;
   public GameStatus Status { get; private set; }
   public IReadOnlyList<RoundInfo> RoundInfos => EditableRoundInfos;
 
   public static Game Create(Player controllingPlayer)
   {
-    return new Game(new GameId(), new List<Player> { controllingPlayer });
+    return new Game
+    {
+      Id = new GameId().Value,
+      EditablePlayers = new List<Player> { controllingPlayer },
+      EditableRoundInfos = new List<RoundInfo>()
+    };
   }
 
   public void AddPlayer(Player player)
@@ -37,16 +42,15 @@ public record Game
       throw new InvalidOperationException("Cannot start game with less than 2 players");
 
     Status = GameStatus.BiddingOpen;
-    EditableRoundInfos.Add(new RoundInfo(Players, 1));
+    EditableRoundInfos.Add(RoundInfo.Create(Players, 1));
   }
 
   public override int GetHashCode()
   => HashCode.Combine(Id, HashUtility.CombineHashCodes(Players), Status, HashUtility.CombineHashCodes(RoundInfos));
 
-  private Game(GameId id, List<Player> players)
+  private Game()
   {
-    Id = id;
-    EditablePlayers = players;
+    EditablePlayers = new List<Player>();
     EditableRoundInfos = new List<RoundInfo>();
     Status = GameStatus.AcceptingPlayers;
   }

@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 
 public record GameId
@@ -16,6 +17,7 @@ public record GameId
     Value = gameId.Value;
   }
 
+  [Key]
   public string Value { get; init; }
 
   private static string NormalizeGameId(string input)

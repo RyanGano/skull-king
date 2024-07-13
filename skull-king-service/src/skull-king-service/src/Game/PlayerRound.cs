@@ -1,11 +1,7 @@
 public record PlayerRound
 {
-  public Player Player { get; init; }
-  public Round Round { get; init; }
+  public Guid Id { get; init; }
+  public required Player? Player { get; init; }
+  public required Round? Round { get; init; }
 
-  public PlayerRound(Player player, Round round)
-  {
-    Player = player;
-    Round = round;
-  }
 }
