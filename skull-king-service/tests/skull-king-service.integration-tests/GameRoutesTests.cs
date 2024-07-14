@@ -127,4 +127,32 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     Assert.Equal("Player 2", responsePlayer?.Name);
     Assert.NotNull(responsePlayer?.Id);
   }
+
+  [Fact]
+  public async Task CannotAddTooManyPlayers()
+  {
+    var newGameDto = new NewGameDto { PlayerName = "Player 1" };
+    var gameContent = JsonContent.Create(newGameDto);
+    var response = await _client.PostAsync("/games", gameContent);
+
+    var responseContent = await response.Content.ReadAsStringAsync();
+    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
+    var gameId = responseGame?.Id;
+
+    for (var i = 0; i < 7; i++)
+    {
+      var player = new PlayerDto { Name = $"Player {i + 2}" };
+      var content = JsonContent.Create(player);
+      response = await _client.PutAsync($"/games/{gameId}/players", content);
+
+      response.EnsureSuccessStatusCode();
+    }
+
+    // Adding a 9th player should fail
+    var newPlayer = new PlayerDto { Name = "Player 9" };
+    var playerContent = JsonContent.Create(newPlayer);
+    response = await _client.PutAsync($"/games/{gameId}/players", playerContent);
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+  }
 }

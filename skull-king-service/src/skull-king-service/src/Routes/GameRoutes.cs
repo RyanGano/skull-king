@@ -52,12 +52,20 @@ public static class GameRoutes
       }
 
       var newPlayer = new Player(player.Name!);
-      db.Players.Add(newPlayer);
-      game.AddPlayer(newPlayer);
-      db.Games.Update(game);
-      db.SaveChanges();
 
-      await httpContext.Response.WriteAsJsonAsync(newPlayer);
+      try
+      {
+        db.Players.Add(newPlayer);
+        game.AddPlayer(newPlayer);
+        db.Games.Update(game);
+        db.SaveChanges();
+
+        await httpContext.Response.WriteAsJsonAsync(newPlayer);
+      }
+      catch (ArgumentException)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+      }
     })
     .WithName("AddPlayerToGame")
     .RequireCors(cors);
