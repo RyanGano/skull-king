@@ -30,7 +30,13 @@ public static class GameRoutes
 
     app.MapGet("/games/{id}", async (string id, HttpContext httpContext, SkullKingDbContext db) =>
     {
-      var game = await db.Games.Include(g => g.Players).Include(g => g.RoundInfos).Where(x => x.Id == id).FirstOrDefaultAsync();
+      var game = await db.Games
+        .Include(game => game.Players)
+        .Include(game => game.RoundInfos)
+          .ThenInclude(roundinfo => roundinfo.PlayerRounds)!
+          .ThenInclude(playerRound => playerRound.Round)
+        .Where(x => x.Id == id)
+        .FirstOrDefaultAsync();
       if (game is null)
       {
         httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -68,6 +74,32 @@ public static class GameRoutes
       }
     })
     .WithName("AddPlayerToGame")
+    .RequireCors(cors);
+
+    app.MapGet("/games/{id}/start", async (string id, HttpContext httpContext, SkullKingDbContext db) =>
+    {
+      var game = await db.Games.Include(g => g.Players).Include(g => g.RoundInfos).Where(x => x.Id == id).FirstOrDefaultAsync();
+      if (game is null)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+      }
+
+      try
+      {
+        game.StartGame();
+        db.Games.Update(game);
+        db.RoundInfos.AddRange(game.RoundInfos);
+        db.SaveChanges();
+
+        await httpContext.Response.WriteAsJsonAsync(game);
+      }
+      catch (ArgumentException)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+      }
+    })
+    .WithName("StartGame")
     .RequireCors(cors);
   }
 }

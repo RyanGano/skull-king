@@ -155,4 +155,23 @@ public class GameRoutesTests : IClassFixture<TestFixture>
 
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
+
+  [Fact]
+  public async Task CanStartGame()
+  {
+    var newGameDto = new NewGameDto { PlayerName = "Player 1" };
+    var gameContent = JsonContent.Create(newGameDto);
+    var response = await _client.PostAsync("/games", gameContent);
+
+    var responseContent = await response.Content.ReadAsStringAsync();
+    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
+    var gameId = responseGame?.Id;
+
+    var newPlayer = new PlayerDto { Name = "Player 2" };
+    var playerContent = JsonContent.Create(newPlayer);
+    await _client.PutAsync($"/games/{gameId}/players", playerContent);
+
+    response = await _client.GetAsync($"/games/{gameId}/start");
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+  }
 }
