@@ -71,4 +71,35 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     response = await _client.PostAsync("/games", content);
     Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
   }
+
+  [Fact]
+  public async Task CanRetrieveGameWithValidId()
+  {
+    var newGameDto = new NewGameDto { PlayerName = "Tester" };
+    var content = JsonContent.Create(newGameDto);
+    var response = await _client.PostAsync("/games", content);
+
+    var responseContent = await response.Content.ReadAsStringAsync();
+    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
+    var gameId = responseGame?.Id;
+
+    response = await _client.GetAsync($"/games/{gameId}");
+
+    response.EnsureSuccessStatusCode();
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    responseContent = await response.Content.ReadAsStringAsync();
+    responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
+    var lokkupGameId = responseGame?.Id;
+
+    Assert.Equal(gameId, lokkupGameId);
+  }
+
+  [Fact]
+  public async Task CannotRetrieveInvalidGameId()
+  {
+    var response = await _client.GetAsync($"/games/INVALID");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
 }
