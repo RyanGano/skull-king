@@ -46,13 +46,8 @@ public class GameRoutesTests : IClassFixture<TestFixture>
   [Fact]
   public async Task CreatedGameIsValid()
   {
-    var newGameDto = new NewGameDto { PlayerName = "Test Player" };
-    var content = JsonContent.Create(newGameDto);
-    var response = await _client.PostAsync("/games", content);
-
-    var responseContent = await response.Content.ReadAsStringAsync();
-    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
-    var gameId = responseGame?.Id;
+    var gameDto = await CreateNewGame("Test Player");
+    var gameId = gameDto?.Id;
 
     var game = await _dbContext.Games.Include(g => g.Players).FirstOrDefaultAsync(x => x.Id == gameId);
 
@@ -64,7 +59,7 @@ public class GameRoutesTests : IClassFixture<TestFixture>
   [Fact]
   public async Task CannotCreateGameWithSameId()
   {
-    var newGameDto = new NewGameDto { PlayerName = "__Sample Game 1__" };
+    var newGameDto = new NewGameDto { PlayerName = "__Sample Game 2__" };
     var content = JsonContent.Create(newGameDto);
     var response = await _client.PostAsync("/games", content);
 
@@ -75,21 +70,16 @@ public class GameRoutesTests : IClassFixture<TestFixture>
   [Fact]
   public async Task CanRetrieveGameWithValidId()
   {
-    var newGameDto = new NewGameDto { PlayerName = "Tester" };
-    var content = JsonContent.Create(newGameDto);
-    var response = await _client.PostAsync("/games", content);
+    var gameDto = await CreateNewGame("Test Player");
+    var gameId = gameDto?.Id;
 
-    var responseContent = await response.Content.ReadAsStringAsync();
-    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
-    var gameId = responseGame?.Id;
-
-    response = await _client.GetAsync($"/games/{gameId}");
+    var response = await _client.GetAsync($"/games/{gameId}");
 
     response.EnsureSuccessStatusCode();
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-    responseContent = await response.Content.ReadAsStringAsync();
-    responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
+    var responseContent = await response.Content.ReadAsStringAsync();
+    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
     var lookupGameId = responseGame?.Id;
 
     Assert.Equal(gameId, lookupGameId);
@@ -98,27 +88,22 @@ public class GameRoutesTests : IClassFixture<TestFixture>
   [Fact]
   public async Task RetrievingGameWithCurrentHashSavesBandwidth()
   {
-    var newGameDto = new NewGameDto { PlayerName = "Tester" };
-    var content = JsonContent.Create(newGameDto);
-    var response = await _client.PostAsync("/games", content);
+    var createdGame = await CreateNewGame("Test Player");
+    var gameId = createdGame?.Id;
+    var gameHash = createdGame?.Hash;
 
-    var responseContent = await response.Content.ReadAsStringAsync();
-    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
-    var gameId = responseGame?.Id;
-    var gameHash = responseGame?.Hash;
-
-    response = await _client.GetAsync($"/games/{gameId}/?knownHash={gameHash}");
+    var response = await _client.GetAsync($"/games/{gameId}/?knownHash={gameHash}");
     Assert.Equal(HttpStatusCode.NotModified, response.StatusCode);
 
-    response = await _client.GetAsync($"/games/{gameId}/?hash={responseContent.GetHashCode()}");
+    response = await _client.GetAsync($"/games/{gameId}/?hash={gameId!.GetHashCode()}");
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-    responseContent = await response.Content.ReadAsStringAsync();
+    var responseContent = await response.Content.ReadAsStringAsync();
     var secondResponseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
     var lookupGameId = secondResponseGame?.Id;
 
     Assert.Equal(gameId, lookupGameId);
-    Assert.Equivalent(responseGame, secondResponseGame);
+    Assert.Equivalent(createdGame, secondResponseGame);
   }
 
   [Fact]
@@ -132,22 +117,17 @@ public class GameRoutesTests : IClassFixture<TestFixture>
   [Fact]
   public async Task CanAddPlayerToExistingGame()
   {
-    var newGameDto = new NewGameDto { PlayerName = "Tester" };
-    var gameContent = JsonContent.Create(newGameDto);
-    var response = await _client.PostAsync("/games", gameContent);
-
-    var responseContent = await response.Content.ReadAsStringAsync();
-    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
-    var gameId = responseGame?.Id;
+    var createdGame = await CreateNewGame("Tester");
+    var gameId = createdGame?.Id;
 
     var newPlayer = new PlayerDto { Name = "Player 2" };
     var playerContent = JsonContent.Create(newPlayer);
-    response = await _client.PutAsync($"/games/{gameId}/players", playerContent);
+    var response = await _client.PutAsync($"/games/{gameId}/players", playerContent);
 
     response.EnsureSuccessStatusCode();
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-    responseContent = await response.Content.ReadAsStringAsync();
+    var responseContent = await response.Content.ReadAsStringAsync();
     var responsePlayer = JsonSerializer.Deserialize<PlayerDto>(responseContent, _JsonSerializerOptions);
 
     Assert.Equal("Player 2", responsePlayer?.Name);
@@ -157,27 +137,22 @@ public class GameRoutesTests : IClassFixture<TestFixture>
   [Fact]
   public async Task CannotAddTooManyPlayers()
   {
-    var newGameDto = new NewGameDto { PlayerName = "Player 1" };
-    var gameContent = JsonContent.Create(newGameDto);
-    var response = await _client.PostAsync("/games", gameContent);
-
-    var responseContent = await response.Content.ReadAsStringAsync();
-    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
-    var gameId = responseGame?.Id;
+    var createdGame = await CreateNewGame("Player 1");
+    var gameId = createdGame?.Id;
 
     for (var i = 0; i < 7; i++)
     {
       var player = new PlayerDto { Name = $"Player {i + 2}" };
       var content = JsonContent.Create(player);
-      response = await _client.PutAsync($"/games/{gameId}/players", content);
+      var result = await _client.PutAsync($"/games/{gameId}/players", content);
 
-      response.EnsureSuccessStatusCode();
+      result.EnsureSuccessStatusCode();
     }
 
     // Adding a 9th player should fail
     var newPlayer = new PlayerDto { Name = "Player 9" };
     var playerContent = JsonContent.Create(newPlayer);
-    response = await _client.PutAsync($"/games/{gameId}/players", playerContent);
+    var response = await _client.PutAsync($"/games/{gameId}/players", playerContent);
 
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
@@ -185,19 +160,26 @@ public class GameRoutesTests : IClassFixture<TestFixture>
   [Fact]
   public async Task CanStartGame()
   {
-    var newGameDto = new NewGameDto { PlayerName = "Player 1" };
-    var gameContent = JsonContent.Create(newGameDto);
-    var response = await _client.PostAsync("/games", gameContent);
-
-    var responseContent = await response.Content.ReadAsStringAsync();
-    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
-    var gameId = responseGame?.Id;
+    var createdGame = await CreateNewGame("Player 1");
+    var gameId = createdGame?.Id;
 
     var newPlayer = new PlayerDto { Name = "Player 2" };
     var playerContent = JsonContent.Create(newPlayer);
     await _client.PutAsync($"/games/{gameId}/players", playerContent);
 
-    response = await _client.GetAsync($"/games/{gameId}/start");
+    var response = await _client.GetAsync($"/games/{gameId}/start");
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+  }
+
+  private async Task<GameDto?> CreateNewGame(string playerName)
+  {
+    var newGameDto = new NewGameDto { PlayerName = playerName };
+    var content = JsonContent.Create(newGameDto);
+    var response = await _client.PostAsync("/games", content);
+
+    var responseContent = await response.Content.ReadAsStringAsync();
+    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
+
+    return responseGame;
   }
 }

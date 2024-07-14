@@ -9,6 +9,8 @@ public static class GameRoutes
       // We may want to setup a specific game ID for testing purposes
       var gameId = gameInfo.PlayerName == "__Sample Game 1__"
         ? new GameId("ABCD")
+        : gameInfo.PlayerName == "__Sample Game 2__"
+        ? new GameId("1234")
         : new GameId();
 
       var existingGame = await db.Games.Where(x => x.Id == gameId.Value).FirstOrDefaultAsync();
