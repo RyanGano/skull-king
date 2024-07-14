@@ -135,6 +135,36 @@ public class GameRoutesTests : IClassFixture<TestFixture>
   }
 
   [Fact]
+  public async Task CanEditPlayerName()
+  {
+    var createdGame = await CreateNewGame("Tester");
+    var gameId = createdGame?.Id;
+
+    var newPlayer = new PlayerDto { Name = "Player 2" };
+    var playerContent = JsonContent.Create(newPlayer);
+    var response = await _client.PutAsync($"/games/{gameId}/players", playerContent);
+
+    response.EnsureSuccessStatusCode();
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var responseContent = await response.Content.ReadAsStringAsync();
+    var responsePlayer = JsonSerializer.Deserialize<PlayerDto>(responseContent, _JsonSerializerOptions);
+
+    var playerId = responsePlayer?.Id;
+    playerContent = JsonContent.Create(responsePlayer! with { Name = "Updated Name" });
+    response = await _client.PutAsync($"/games/{gameId}/players", playerContent);
+
+    response.EnsureSuccessStatusCode();
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    responseContent = await response.Content.ReadAsStringAsync();
+    responsePlayer = JsonSerializer.Deserialize<PlayerDto>(responseContent, _JsonSerializerOptions);
+
+    Assert.Equal("Updated Name", responsePlayer?.Name);
+    Assert.Equal(playerId, responsePlayer?.Id);
+  }
+
+  [Fact]
   public async Task CannotAddTooManyPlayers()
   {
     var createdGame = await CreateNewGame("Player 1");

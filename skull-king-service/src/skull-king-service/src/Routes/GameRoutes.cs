@@ -64,16 +64,24 @@ public static class GameRoutes
         return;
       }
 
-      var newPlayer = new Player(player.Name!);
-
       try
       {
-        db.Players.Add(newPlayer);
-        game.AddPlayer(newPlayer);
+        if (db.Players.Find(player.Id) is { } playerModel)
+        {
+          playerModel.ChangeName(player.Name!);
+          db.Players.Update(playerModel);
+        }
+        else
+        {
+          playerModel = new Player(player.Name!);
+          db.Players.Add(playerModel);
+          game.AddPlayer(playerModel);
+        }
+
         db.Games.Update(game);
         await UpdateHashAndSaveAsync(db, game);
 
-        await httpContext.Response.WriteAsJsonAsync(newPlayer);
+        await httpContext.Response.WriteAsJsonAsync(playerModel.MapToDto());
       }
       catch (ArgumentException)
       {
