@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-public class TestFixture : IDisposable
+public class TestFixture
 {
     public HttpClient Client { get; private set; }
     public SkullKingDbContext DbContext { get; private set; }
@@ -35,11 +35,5 @@ public class TestFixture : IDisposable
         Client = appFactory.CreateClient();
         var scope = appFactory.Services.CreateScope();
         DbContext = scope.ServiceProvider.GetRequiredService<SkullKingDbContext>();
-    }
-
-    public void Dispose()
-    {
-        DbContext.Database.EnsureDeleted();
-        DbContext.Dispose();
     }
 }

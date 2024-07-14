@@ -20,6 +20,7 @@ public static class GameRoutes
 
       var game = Game.Create(gameId, new Player(gameInfo.PlayerName));
       db.Games.Add(game);
+      await UpdateHashAndSaveAsync(db, game);
       await db.SaveChangesAsync();
 
       httpContext.Response.StatusCode = 201;
@@ -28,29 +29,33 @@ public static class GameRoutes
     .WithName("CreateGame")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}", async (string id, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapGet("/games/{id}", async (string id, HttpContext httpContext, SkullKingDbContext db, string? knownHash = null) =>
     {
-      var game = await db.Games
-        .Include(game => game.Players)
-        .Include(game => game.RoundInfos)
-          .ThenInclude(roundinfo => roundinfo.PlayerRounds)!
-          .ThenInclude(playerRound => playerRound.Round)
-        .Where(x => x.Id == id)
-        .FirstOrDefaultAsync();
+      if (knownHash is not null)
+      {
+        var currentHash = db.Hashes.Find(id);
+        if (currentHash?.Value == knownHash)
+        {
+          httpContext.Response.StatusCode = StatusCodes.Status304NotModified;
+          return;
+        }
+      }
+
+      var game = await GetFullGame(id, db);
       if (game is null)
       {
         httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
         return;
       }
 
-      await httpContext.Response.WriteAsJsonAsync(game);
+      await httpContext.Response.WriteAsJsonAsync(game.MapToDto());
     })
     .WithName("GetGame")
     .RequireCors(cors);
 
     app.MapPut("/games/{id}/players", async (string id, PlayerDto player, HttpContext httpContext, SkullKingDbContext db) =>
     {
-      var game = await db.Games.Include(g => g.Players).Include(g => g.RoundInfos).Where(x => x.Id == id).FirstOrDefaultAsync();
+      var game = await GetFullGame(id, db);
       if (game is null)
       {
         httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -64,7 +69,7 @@ public static class GameRoutes
         db.Players.Add(newPlayer);
         game.AddPlayer(newPlayer);
         db.Games.Update(game);
-        db.SaveChanges();
+        await UpdateHashAndSaveAsync(db, game);
 
         await httpContext.Response.WriteAsJsonAsync(newPlayer);
       }
@@ -78,7 +83,7 @@ public static class GameRoutes
 
     app.MapGet("/games/{id}/start", async (string id, HttpContext httpContext, SkullKingDbContext db) =>
     {
-      var game = await db.Games.Include(g => g.Players).Include(g => g.RoundInfos).Where(x => x.Id == id).FirstOrDefaultAsync();
+      var game = await GetFullGame(id, db);
       if (game is null)
       {
         httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -90,7 +95,7 @@ public static class GameRoutes
         game.StartGame();
         db.Games.Update(game);
         db.RoundInfos.AddRange(game.RoundInfos);
-        db.SaveChanges();
+        await UpdateHashAndSaveAsync(db, game);
 
         await httpContext.Response.WriteAsJsonAsync(game);
       }
@@ -101,5 +106,32 @@ public static class GameRoutes
     })
     .WithName("StartGame")
     .RequireCors(cors);
+  }
+
+  private static async Task<Game?> GetFullGame(string id, SkullKingDbContext db)
+  {
+    return await db.Games
+      .Include(game => game.Players)
+      .Include(game => game.RoundInfos)
+        .ThenInclude(roundinfo => roundinfo.PlayerRounds)!
+        .ThenInclude(playerRound => playerRound.Round)
+      .Where(x => x.Id == id)
+      .FirstOrDefaultAsync();
+  }
+
+  private static async Task UpdateHashAndSaveAsync(SkullKingDbContext db, Game game)
+  {
+    var existingHash = await db.Hashes.FindAsync(game.Id);
+    if (existingHash is not null)
+    {
+      existingHash.Value = game.GetHashCode().ToString();
+      db.Hashes.Update(existingHash);
+    }
+    else
+    {
+      db.Hashes.Add(new Hash { GameId = game.Id, Value = game.GetHashCode().ToString() });
+    }
+
+    await db.SaveChangesAsync();
   }
 }

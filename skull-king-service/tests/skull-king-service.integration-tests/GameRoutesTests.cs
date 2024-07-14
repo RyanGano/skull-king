@@ -90,9 +90,35 @@ public class GameRoutesTests : IClassFixture<TestFixture>
 
     responseContent = await response.Content.ReadAsStringAsync();
     responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
-    var lokkupGameId = responseGame?.Id;
+    var lookupGameId = responseGame?.Id;
 
-    Assert.Equal(gameId, lokkupGameId);
+    Assert.Equal(gameId, lookupGameId);
+  }
+
+  [Fact]
+  public async Task RetrievingGameWithCurrentHashSavesBandwidth()
+  {
+    var newGameDto = new NewGameDto { PlayerName = "Tester" };
+    var content = JsonContent.Create(newGameDto);
+    var response = await _client.PostAsync("/games", content);
+
+    var responseContent = await response.Content.ReadAsStringAsync();
+    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
+    var gameId = responseGame?.Id;
+    var gameHash = responseGame?.Hash;
+
+    response = await _client.GetAsync($"/games/{gameId}/?knownHash={gameHash}");
+    Assert.Equal(HttpStatusCode.NotModified, response.StatusCode);
+
+    response = await _client.GetAsync($"/games/{gameId}/?hash={responseContent.GetHashCode()}");
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    responseContent = await response.Content.ReadAsStringAsync();
+    var secondResponseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
+    var lookupGameId = secondResponseGame?.Id;
+
+    Assert.Equal(gameId, lookupGameId);
+    Assert.Equivalent(responseGame, secondResponseGame);
   }
 
   [Fact]

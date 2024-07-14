@@ -63,6 +63,7 @@ public record Game
     return new GameDto
     {
       Id = Id,
+      Hash = GetHashCode().ToString(),
       Players = Players.Select(x => x.MapToDto()).ToList(),
       Status = Status,
       RoundInfos = RoundInfos.Select(x => x.MapToDto()).ToList()

@@ -12,4 +12,5 @@ public class SkullKingDbContext : DbContext
     public DbSet<Round> Rounds { get; set; }
     public DbSet<PlayerRound> PlayerRounds { get; set; }
     public DbSet<RoundInfo> RoundInfos { get; set; }
+    public DbSet<Hash> Hashes { get; set; }
 }
