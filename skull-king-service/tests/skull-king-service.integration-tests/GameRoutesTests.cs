@@ -102,4 +102,29 @@ public class GameRoutesTests : IClassFixture<TestFixture>
 
     Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
   }
+
+  [Fact]
+  public async Task CanAddPlayerToExistingGame()
+  {
+    var newGameDto = new NewGameDto { PlayerName = "Tester" };
+    var gameContent = JsonContent.Create(newGameDto);
+    var response = await _client.PostAsync("/games", gameContent);
+
+    var responseContent = await response.Content.ReadAsStringAsync();
+    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
+    var gameId = responseGame?.Id;
+
+    var newPlayer = new PlayerDto { Name = "Player 2" };
+    var playerContent = JsonContent.Create(newPlayer);
+    response = await _client.PutAsync($"/games/{gameId}/players", playerContent);
+
+    response.EnsureSuccessStatusCode();
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    responseContent = await response.Content.ReadAsStringAsync();
+    var responsePlayer = JsonSerializer.Deserialize<PlayerDto>(responseContent, _JsonSerializerOptions);
+
+    Assert.Equal("Player 2", responsePlayer?.Name);
+    Assert.NotNull(responsePlayer?.Id);
+  }
 }

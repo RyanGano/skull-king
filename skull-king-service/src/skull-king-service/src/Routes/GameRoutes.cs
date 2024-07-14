@@ -33,13 +33,33 @@ public static class GameRoutes
       var game = await db.Games.Include(g => g.Players).Include(g => g.RoundInfos).Where(x => x.Id == id).FirstOrDefaultAsync();
       if (game is null)
       {
-        httpContext.Response.StatusCode = 404;
+        httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
         return;
       }
 
       await httpContext.Response.WriteAsJsonAsync(game);
     })
-    .WithName("GetSigninInfo")
+    .WithName("GetGame")
+    .RequireCors(cors);
+
+    app.MapPut("/games/{id}/players", async (string id, PlayerDto player, HttpContext httpContext, SkullKingDbContext db) =>
+    {
+      var game = await db.Games.Include(g => g.Players).Include(g => g.RoundInfos).Where(x => x.Id == id).FirstOrDefaultAsync();
+      if (game is null)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+      }
+
+      var newPlayer = new Player(player.Name!);
+      db.Players.Add(newPlayer);
+      game.AddPlayer(newPlayer);
+      db.Games.Update(game);
+      db.SaveChanges();
+
+      await httpContext.Response.WriteAsJsonAsync(newPlayer);
+    })
+    .WithName("AddPlayerToGame")
     .RequireCors(cors);
   }
 }
