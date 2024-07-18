@@ -6,6 +6,7 @@ import { callGetRoute, callPostRoute, callPutRoute } from "./utils/api-utils";
 import { AddPlayerUri, CreateNewGameUri, GetGameUri } from "./service-paths";
 import { Game } from "./types/game";
 import { TextInputArea } from "./common/input-area/text-input-area";
+import { SimpleModal } from "./common/simple-modal";
 
 const App = () => {
   const [showStartGameUI, setShowStartGameUI] = useState(false);
@@ -83,28 +84,15 @@ const App = () => {
 
   const getStartGameUI = () => {
     return (
-      <Stack gap={2}>
-        <TextInputArea
-          startingValue={playerName}
-          setNewValue={(newValue) => setPlayerName(newValue)}
-          width={"150"}
-          placeholder="Enter your name"
-          onEnter={startGame}
-          isValid={(playerName?.length ?? 0) > 0}
-          autoFocus={true}
-        />
-        <Stack direction="horizontal" gap={3}>
-          <Button
-            onClick={playerName ? startGame : undefined}
-            disabled={!playerName}
-          >
-            Start Game
-          </Button>
-          <Button variant="link" onClick={() => setShowStartGameUI(false)}>
-            Cancel
-          </Button>
-        </Stack>
-      </Stack>
+      <TextInputArea
+        startingValue={playerName}
+        setNewValue={(newValue) => setPlayerName(newValue)}
+        width={"150"}
+        placeholder="Enter your name"
+        onEnter={startGame}
+        isValid={(playerName?.length ?? 0) > 0}
+        autoFocus={true}
+      />
     );
   };
 
@@ -176,7 +164,17 @@ const App = () => {
           </Stack>
         </Stack>
       )}
-      {showStartGameUI && getStartGameUI()}
+      {showStartGameUI && (
+        <SimpleModal
+          title={"New Game"}
+          content={getStartGameUI()}
+          defaultButtonContent={"Start"}
+          onAccept={() => startGame()}
+          onCancel={() => setShowStartGameUI(false)}
+          allowAccept={!!playerName}
+          show={true}
+        />
+      )}
       {showJoinGameUI && getJoinGameUI()}
       {!showStartGameUI && !showJoinGameUI && !game && (
         <Button onClick={() => setShowStartGameUI(true)}>Start Game</Button>
