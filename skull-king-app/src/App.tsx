@@ -3,7 +3,12 @@ import Button from "react-bootstrap/esm/Button";
 import Stack from "react-bootstrap/esm/Stack";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { callGetRoute, callPostRoute, callPutRoute } from "./utils/api-utils";
-import { AddPlayerUri, CreateNewGameUri, GetGameUri } from "./service-paths";
+import {
+  AddPlayerUri,
+  CreateNewGameUri,
+  EditPlayerUri,
+  GetGameUri,
+} from "./service-paths";
 import { Game } from "./types/game";
 import { TextInputArea } from "./common/input-area/text-input-area";
 import { SimpleModal } from "./common/simple-modal";
@@ -11,6 +16,7 @@ import { SimpleModal } from "./common/simple-modal";
 const App = () => {
   const [showStartGameUI, setShowStartGameUI] = useState(false);
   const [showJoinGameUI, setShowJoinGameUI] = useState(false);
+  const [showEditPlayerUI, setShowEditPlayerUI] = useState(false);
   const [playerName, setPlayerName] = useState<string>();
   const [gameId, setGameId] = useState<string>();
   const [game, setGame] = useState<Game | null>(null);
@@ -82,6 +88,25 @@ const App = () => {
     }
   }, [gameId, playerName, startUpdateTimer]);
 
+  const editPlayerName = useCallback(async () => {
+    if (!game?.id || !playerName) {
+      console.log("No game id");
+      return;
+    }
+
+    const result = await callPutRoute(
+      EditPlayerUri(game.id),
+      JSON.parse(JSON.stringify({ id: myPlayerId, name: playerName }))
+    );
+
+    if (result.status !== 200) {
+      console.log("Error changing name", result.status, result.statusText);
+    } else {
+      setShowEditPlayerUI(false);
+      updateGame(game.id, currentHashRef.current ?? "");
+    }
+  }, [game?.id, myPlayerId, playerName, updateGame]);
+
   const getStartGameUI = () => {
     return (
       <TextInputArea
@@ -120,18 +145,21 @@ const App = () => {
           onEnter={gameId?.length && playerName?.length ? joinGame : undefined}
           isValid={(playerName?.length ?? 0) > 0}
         />
-        <Stack direction="horizontal" gap={3}>
-          <Button
-            onClick={playerName && gameId?.length === 4 ? joinGame : undefined}
-            disabled={!playerName || gameId?.length !== 4}
-          >
-            Join Game
-          </Button>
-          <Button variant="link" onClick={() => setShowJoinGameUI(false)}>
-            Cancel
-          </Button>
-        </Stack>
       </Stack>
+    );
+  };
+
+  const getEditPlayerNameUI = () => {
+    return (
+      <TextInputArea
+        startingValue={playerName}
+        setNewValue={(newValue) => setPlayerName(newValue)}
+        width={"150"}
+        placeholder="Enter your name"
+        onEnter={editPlayerName}
+        isValid={(playerName?.length ?? 0) > 0}
+        autoFocus={true}
+      />
     );
   };
 
@@ -153,7 +181,11 @@ const App = () => {
               >
                 {x.name}
                 {myPlayerId === x.id ? (
-                  <Button variant="link" className={"textLink"}>
+                  <Button
+                    variant="link"
+                    className={"textLink"}
+                    onClick={() => setShowEditPlayerUI(true)}
+                  >
                     edit
                   </Button>
                 ) : (
@@ -175,7 +207,28 @@ const App = () => {
           show={true}
         />
       )}
-      {showJoinGameUI && getJoinGameUI()}
+      {showJoinGameUI && (
+        <SimpleModal
+          title={"Join Game"}
+          content={getJoinGameUI()}
+          defaultButtonContent={"Join"}
+          onAccept={() => joinGame()}
+          onCancel={() => setShowJoinGameUI(false)}
+          allowAccept={!!playerName && gameId?.length === 4}
+          show={true}
+        />
+      )}
+      {showEditPlayerUI && (
+        <SimpleModal
+          title={"Edit Player Name"}
+          content={getEditPlayerNameUI()}
+          defaultButtonContent={"Save"}
+          onAccept={() => editPlayerName()}
+          onCancel={() => setShowEditPlayerUI(false)}
+          allowAccept={!!playerName}
+          show={true}
+        />
+      )}
       {!showStartGameUI && !showJoinGameUI && !game && (
         <Button onClick={() => setShowStartGameUI(true)}>Start Game</Button>
       )}

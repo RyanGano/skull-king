@@ -37,3 +37,9 @@ export function AddPlayerUri(gameId: string) {
     { key: "GAME_ID", value: gameId },
   ]);
 }
+
+export function EditPlayerUri(gameId: string) {
+  return formatUriString(GetGamePlayerInternal, [
+    { key: "GAME_ID", value: gameId },
+  ]);
+}
