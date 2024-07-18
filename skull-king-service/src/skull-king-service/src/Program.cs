@@ -25,13 +25,8 @@ static void SetupCors(string AllowSkullKingApp, WebApplicationBuilder builder)
     options.AddPolicy(name: AllowSkullKingApp,
           policy =>
           {
-            policy.WithOrigins($"http://localhost:{Environment.GetEnvironmentVariable("PORT")}").AllowAnyMethod().AllowAnyHeader();
+            policy.WithOrigins($"{Environment.GetEnvironmentVariable("SK_CLIENT_ADDRESS")}:{Environment.GetEnvironmentVariable("PORT")}").AllowAnyMethod().AllowAnyHeader();
           });
-    // options.AddPolicy(name: AllowSkullKingApp,
-    //       policy =>
-    //       {
-    //         policy.WithOrigins("https://green-stone-0b7a4a71e.3.azurestaticapps.net").AllowAnyMethod().AllowAnyHeader();
-    //       });
   });
 }
 
