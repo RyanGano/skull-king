@@ -13,6 +13,7 @@ const App = () => {
   const [playerName, setPlayerName] = useState<string>();
   const [gameId, setGameId] = useState<string>();
   const [game, setGame] = useState<Game | null>(null);
+  const [myPlayerId, setMyPlayerId] = useState<string>();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const currentHashRef = useRef<string | undefined>();
 
@@ -50,20 +51,33 @@ const App = () => {
       JSON.parse(JSON.stringify(personDto))
     );
 
-    setGame(result.data);
-    startUpdateTimer(result.data?.id);
+    if (result.status !== 201) {
+      console.log("Error creating game", result.status, result.statusText);
+    } else {
+      setGame(result.data);
+      startUpdateTimer(result.data?.id);
+      setShowStartGameUI(false);
+      setMyPlayerId(result.data.players[0].id);
+    }
   }, [playerName, startUpdateTimer]);
 
   const joinGame = useCallback(async () => {
-    const personDto = { name: playerName };
+    if (!gameId || !playerName) {
+      console.log("No game id");
+      return;
+    }
 
     const result = await callPutRoute(
-      AddPlayerUri(gameId!),
-      JSON.parse(JSON.stringify(personDto))
+      AddPlayerUri(gameId),
+      JSON.parse(JSON.stringify({ name: playerName }))
     );
 
-    if (result.status === 200) {
-      startUpdateTimer(gameId!);
+    if (result.status !== 200) {
+      console.log("Error joining game", result.status, result.statusText);
+    } else {
+      startUpdateTimer(gameId);
+      setShowJoinGameUI(false);
+      setMyPlayerId(result.data.id);
     }
   }, [gameId, playerName, startUpdateTimer]);
 
@@ -79,7 +93,17 @@ const App = () => {
           isValid={(playerName?.length ?? 0) > 0}
           autoFocus={true}
         />
-        <Button onClick={startGame}>Start Game</Button>
+        <Stack direction="horizontal" gap={3}>
+          <Button
+            onClick={playerName ? startGame : undefined}
+            disabled={!playerName}
+          >
+            Start Game
+          </Button>
+          <Button variant="link" onClick={() => setShowStartGameUI(false)}>
+            Cancel
+          </Button>
+        </Stack>
       </Stack>
     );
   };
@@ -104,22 +128,56 @@ const App = () => {
           onEnter={gameId?.length && playerName?.length ? joinGame : undefined}
           isValid={(playerName?.length ?? 0) > 0}
         />
-        <Button onClick={joinGame}>Join Game</Button>
+        <Stack direction="horizontal" gap={3}>
+          <Button
+            onClick={playerName && gameId ? joinGame : undefined}
+            disabled={!playerName || !gameId}
+          >
+            Join Game
+          </Button>
+          <Button variant="link" onClick={() => setShowJoinGameUI(false)}>
+            Cancel
+          </Button>
+        </Stack>
       </Stack>
     );
   };
 
   return (
     <Stack gap={2}>
-      {/* {error && <span>{error}</span>} */}
-      <span>Game ID: {game?.id}</span>
-      <span>Players: {game?.players?.map((x) => x.name).join(", ")}</span>
+      {game && <span>Game ID: {game?.id}</span>}
+      {game && (
+        <Stack
+          direction="horizontal"
+          gap={3}
+          style={{ display: "flex", alignItems: "flex-start" }}
+        >
+          <>Players:</>
+          <Stack gap={2}>
+            {game?.players?.map((x) => (
+              <div
+                key={x.id}
+                style={{ display: "flex", alignItems: "baseline" }}
+              >
+                {x.name}
+                {myPlayerId === x.id ? (
+                  <Button variant="link" className={"textLink"}>
+                    edit
+                  </Button>
+                ) : (
+                  ""
+                )}
+              </div>
+            ))}
+          </Stack>
+        </Stack>
+      )}
       {showStartGameUI && getStartGameUI()}
       {showJoinGameUI && getJoinGameUI()}
-      {!showStartGameUI && !showJoinGameUI && (
+      {!showStartGameUI && !showJoinGameUI && !game && (
         <Button onClick={() => setShowStartGameUI(true)}>Start Game</Button>
       )}
-      {!showStartGameUI && !showJoinGameUI && (
+      {!showStartGameUI && !showJoinGameUI && !game && (
         <Button onClick={() => setShowJoinGameUI(true)}>Join Game</Button>
       )}
     </Stack>
