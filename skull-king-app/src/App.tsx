@@ -117,8 +117,12 @@ const App = () => {
           width={"150"}
           placeholder="Game Id"
           onEnter={gameId?.length && playerName?.length ? joinGame : undefined}
-          isValid={(gameId?.length ?? 0) > 0}
+          isValid={(gameId?.length ?? 0) === 4}
           autoFocus={true}
+          inputFormatter={(textWithSelection) => ({
+            ...textWithSelection,
+            value: textWithSelection.value.toUpperCase(),
+          })}
         />
         <TextInputArea
           startingValue={playerName}
@@ -130,8 +134,8 @@ const App = () => {
         />
         <Stack direction="horizontal" gap={3}>
           <Button
-            onClick={playerName && gameId ? joinGame : undefined}
-            disabled={!playerName || !gameId}
+            onClick={playerName && gameId?.length === 4 ? joinGame : undefined}
+            disabled={!playerName || gameId?.length !== 4}
           >
             Join Game
           </Button>
