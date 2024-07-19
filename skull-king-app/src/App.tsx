@@ -8,13 +8,14 @@ import {
   CreateNewGameUri,
   EditPlayerUri,
   GetGameUri,
+  StartGameUri,
 } from "./service-paths";
-import { Game } from "./types/game";
+import { Game, GameStatus } from "./types/game";
 import { TextInputArea } from "./common/input-area/text-input-area";
 import { SimpleModal } from "./common/simple-modal";
 
 const App = () => {
-  const [showStartGameUI, setShowStartGameUI] = useState(false);
+  const [showCreateGameUI, setShowCreateGameUI] = useState(false);
   const [showJoinGameUI, setShowJoinGameUI] = useState(false);
   const [showEditPlayerUI, setShowEditPlayerUI] = useState(false);
   const [playerName, setPlayerName] = useState<string>();
@@ -50,7 +51,7 @@ const App = () => {
     [updateGame]
   );
 
-  const startGame = useCallback(async () => {
+  const createGame = useCallback(async () => {
     const personDto = { playerName: playerName };
 
     const result = await callPostRoute(
@@ -63,7 +64,7 @@ const App = () => {
     } else {
       setGame(result.data);
       startUpdateTimer(result.data?.id);
-      setShowStartGameUI(false);
+      setShowCreateGameUI(false);
       setMyPlayerId(result.data.players[0].id);
     }
   }, [playerName, startUpdateTimer]);
@@ -107,14 +108,33 @@ const App = () => {
     }
   }, [game?.id, myPlayerId, playerName, updateGame]);
 
-  const getStartGameUI = () => {
+  const startGame = useCallback(async () => {
+    if (
+      !game?.id ||
+      game.players?.length < 2 ||
+      game.players[0].id !== myPlayerId
+    ) {
+      console.log("Cannot start game");
+      return;
+    }
+
+    const result = await callGetRoute(StartGameUri(game.id));
+
+    if (result.status !== 200) {
+      console.log("Could not start game", result.status, result.statusText);
+    } else {
+      updateGame(game.id, currentHashRef.current ?? "");
+    }
+  }, [game?.id, game?.players, myPlayerId, updateGame]);
+
+  const getCreateGameUI = () => {
     return (
       <TextInputArea
         startingValue={playerName}
         setNewValue={(newValue) => setPlayerName(newValue)}
         width={"150"}
         placeholder="Enter your name"
-        onEnter={startGame}
+        onEnter={createGame}
         isValid={(playerName?.length ?? 0) > 0}
         autoFocus={true}
       />
@@ -163,9 +183,25 @@ const App = () => {
     );
   };
 
+  const mapGameStatus = (status?: GameStatus) => {
+    switch (status) {
+      case GameStatus.acceptingPlayers:
+        return "Accepting Players";
+      case GameStatus.biddingOpen:
+        return "Bidding Open";
+      case GameStatus.biddingClosed:
+        return "Bidding Closed";
+      case GameStatus.gameOver:
+        return "Game Over";
+      default:
+        return "";
+    }
+  };
+
   return (
     <Stack gap={2}>
       {game && <span>Game ID: {game?.id}</span>}
+      {game && <span>Game Status: {mapGameStatus(game?.status)}</span>}
       {game && (
         <Stack
           direction="horizontal"
@@ -196,13 +232,13 @@ const App = () => {
           </Stack>
         </Stack>
       )}
-      {showStartGameUI && (
+      {showCreateGameUI && (
         <SimpleModal
           title={"New Game"}
-          content={getStartGameUI()}
+          content={getCreateGameUI()}
           defaultButtonContent={"Start"}
-          onAccept={() => startGame()}
-          onCancel={() => setShowStartGameUI(false)}
+          onAccept={() => createGame()}
+          onCancel={() => setShowCreateGameUI(false)}
           allowAccept={!!playerName}
           show={true}
         />
@@ -229,12 +265,17 @@ const App = () => {
           show={true}
         />
       )}
-      {!showStartGameUI && !showJoinGameUI && !game && (
-        <Button onClick={() => setShowStartGameUI(true)}>Start Game</Button>
+      {!showCreateGameUI && !showJoinGameUI && !game && (
+        <Button onClick={() => setShowCreateGameUI(true)}>Create Game</Button>
       )}
-      {!showStartGameUI && !showJoinGameUI && !game && (
+      {!showCreateGameUI && !showJoinGameUI && !game && (
         <Button onClick={() => setShowJoinGameUI(true)}>Join Game</Button>
       )}
+      {game?.status === GameStatus.acceptingPlayers &&
+        (game.players?.length ?? 0) > 1 &&
+        game?.players?.[0].id === myPlayerId && (
+          <Button onClick={startGame}>Start Game</Button>
+        )}
     </Stack>
   );
 };
