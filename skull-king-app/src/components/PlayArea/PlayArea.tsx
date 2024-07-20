@@ -36,12 +36,17 @@ export const PlayArea = (props: PlayAreaProps) => {
   )
     return null;
 
-  const playerStates: PlayerRounds[] = game.players.map((x) => ({
-    player: x,
-    rounds: game.roundInfos.flatMap((y) =>
-      y.playerRounds.filter((z) => z.player.id === x.id).map((z) => z.round)
-    ),
-  }));
+  // Put the current player at the top of the list so they always
+  // know to look for their name. Other players should be in the
+  // same order on all devices, but if not, it's OK.
+  const playerStates: PlayerRounds[] = game.players
+    .map((x) => ({
+      player: x,
+      rounds: game.roundInfos.flatMap((y) =>
+        y.playerRounds.filter((z) => z.player.id === x.id).map((z) => z.round)
+      ),
+    }))
+    .sort((a) => (a.player.id === me.id ? -1 : 0));
 
   return (
     <>
@@ -49,16 +54,16 @@ export const PlayArea = (props: PlayAreaProps) => {
         {playerStates.map((x, index) => (
           <div key={index} className="playerStatusCardContainer">
             <PlayerStatusCard
-              isMe={game.players[index].id === me.id}
+              isMe={x.player.id === me.id}
               playerRounds={x}
               turnPhase={game.status}
               onBidChange={
-                game.players[index].id === me.id
+                x.player.id === me.id
                   ? (newValue) => console.log("onBidChange", newValue)
                   : undefined
               }
               onScoreChange={
-                game.players[index].id === me.id
+                x.player.id === me.id
                   ? (newValue) => console.log("onScoreChange", newValue)
                   : undefined
               }
