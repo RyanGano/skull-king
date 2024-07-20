@@ -66,9 +66,11 @@ const App = () => {
       if (gameId && me) {
         setMe(me);
         startUpdateTimer(gameId);
-      } else {
-        setCookie("skull_king", null);
       }
+
+      // Always clear out the cookie once on reload to ensure that a
+      // player isn't stuck trying to load a "dead game"
+      setCookie("skull_king", null);
     }
   }, [
     cookies.skull_king,
@@ -178,7 +180,6 @@ const App = () => {
     <Stack gap={2}>
       <GameInfo
         game={game}
-        me={me!}
         editMyName={editPlayerName}
         startGame={
           game?.status === GameStatus.acceptingPlayers &&
@@ -195,6 +196,7 @@ const App = () => {
       {game && game?.status !== GameStatus.acceptingPlayers && (
         <PlayArea
           game={game}
+          me={me!}
           moveToNextGameStatus={moveToNextGameStatus}
           moveToPreviousGameStatus={moveToPreviousGameStatus}
         />
