@@ -128,6 +128,16 @@ const App = () => {
     }
   }, [game?.id, game?.players, me?.id, updateGame]);
 
+  const showOptionalPopup = useCallback(() => {
+    return game && game.status !== GameStatus.gameOver
+      ? "Do you really want to stop playing?"
+      : null;
+  }, [game]);
+
+  window.onbeforeunload = function () {
+    return showOptionalPopup();
+  };
+
   const moveToPreviousGameStatus = () => {};
   const moveToNextGameStatus = () => {};
 
