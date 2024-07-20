@@ -20,7 +20,6 @@ export const GameSetup = (props: GameSetupProps) => {
       <TextInputArea
         startingValue={playerName}
         setNewValue={(newValue) => setPlayerName(newValue)}
-        width={"150"}
         placeholder="Enter your name"
         onEnter={
           playerName?.length
@@ -42,7 +41,6 @@ export const GameSetup = (props: GameSetupProps) => {
         <TextInputArea
           startingValue={gameId}
           setNewValue={(newValue) => setGameId(newValue)}
-          width={"150"}
           placeholder="Game Id"
           onEnter={
             (gameId?.length ?? 0) === 4 && playerName?.length
@@ -62,7 +60,6 @@ export const GameSetup = (props: GameSetupProps) => {
         <TextInputArea
           startingValue={playerName}
           setNewValue={(newValue) => setPlayerName(newValue)}
-          width={"150"}
           placeholder="Enter your name"
           onEnter={
             (gameId?.length ?? 0) === 4 && playerName?.length

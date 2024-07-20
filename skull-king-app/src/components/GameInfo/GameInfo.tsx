@@ -36,7 +36,6 @@ export const GameInfo = (props: GameInfoProps) => {
       <TextInputArea
         startingValue={me.name}
         setNewValue={(newValue) => setMyUpdatedName(newValue)}
-        width={"150"}
         placeholder="Enter your name"
         onEnter={() => {
           editMyName(myUpdatedName!);

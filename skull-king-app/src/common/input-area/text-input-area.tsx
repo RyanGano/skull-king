@@ -1,12 +1,15 @@
 import * as React from "react";
-import Form from "react-bootstrap/esm/Form";
 import { useEffect, useState } from "react";
+import classNames from "classnames";
+import Form from "react-bootstrap/esm/Form";
+
+import "./text-input-area.less";
 
 export interface TextInputAreaProps {
   setNewValue: (newValue: string) => void;
   startingValue?: string;
   placeholder?: string;
-  width: number | string;
+  width?: number | string;
   onEnter?: (newValue?: string) => void;
   updateOnlyOnBlur?: boolean;
   autoFocus?: boolean;
@@ -144,11 +147,6 @@ export const TextInputArea = (props: TextInputAreaProps) => {
     setPossibleValue(null);
   }
 
-  const fieldStyle =
-    isValid === false
-      ? { borderColor: "red", borderWidth: "medium", width: width }
-      : { width: width };
-
   return (
     <>
       <Form onSubmit={(e) => e.preventDefault()}>
@@ -156,7 +154,14 @@ export const TextInputArea = (props: TextInputAreaProps) => {
           type="textarea"
           ref={inputRef}
           value={possibleValue ?? value ?? startingValue ?? ""}
-          style={fieldStyle}
+          style={
+            {
+              "--text-field-width": width ? `${width}px` : undefined,
+            } as React.CSSProperties
+          }
+          className={classNames("textFieldStyle", {
+            ["isInvalid"]: !isValid,
+          })}
           onKeyDown={onKeypress}
           onChange={onChange}
           onBlur={onBlur}
