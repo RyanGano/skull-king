@@ -13,12 +13,14 @@ import { Game, GameStatus, Player } from "./types/game";
 import { PlayArea } from "./components/PlayArea";
 import { GameInfo } from "./components/GameInfo";
 import { GameSetup } from "./components/GameSetup";
+import { useCookies } from "react-cookie";
 
 const App = () => {
   const [game, setGame] = useState<Game | null>(null);
   const [me, setMe] = useState<Player>();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const currentHashRef = useRef<string | undefined>();
+  const [cookies, setCookie] = useCookies(["skull_king"]);
 
   useEffect(() => {
     currentHashRef.current = game?.hash;
@@ -45,6 +47,37 @@ const App = () => {
     },
     [updateGame]
   );
+
+  // Handle storing and retrieving game cookies. This
+  // allows a player to return to a game if they happen
+  // to refresh the page, or if their browser exits.
+  useEffect(() => {
+    if (game?.id && me && !cookies.skull_king) {
+      setCookie("skull_king", { gameId: game.id, me: { ...me } });
+      return;
+    }
+
+    if (game?.status == GameStatus.gameOver) {
+      setCookie("skull_king", null);
+    }
+
+    if (cookies.skull_king && !game?.id) {
+      const { gameId, me } = cookies.skull_king;
+      if (gameId && me) {
+        setMe(me);
+        startUpdateTimer(gameId);
+      } else {
+        setCookie("skull_king", null);
+      }
+    }
+  }, [
+    cookies.skull_king,
+    game?.id,
+    game?.status,
+    me,
+    setCookie,
+    startUpdateTimer,
+  ]);
 
   const createGame = useCallback(
     async (playerName: string) => {
