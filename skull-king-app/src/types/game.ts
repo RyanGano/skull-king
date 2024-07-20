@@ -36,3 +36,8 @@ export type Game = {
   roundInfos: RoundInfo[];
   hash: string;
 };
+
+export type PlayerRounds = {
+  player: Player;
+  rounds: Round[];
+};
