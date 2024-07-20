@@ -153,18 +153,10 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
         show={showScoreUI}
       />
       <div
-        style={
-          {
-            "--background-color": dealer
-              ? onBidChange
-                ? "var(--defaultGreenColor)"
-                : "var(--defaultBlueColor)"
-              : onBidChange
-              ? "var(--defaultBlueColor)"
-              : "var(--defaultGreenColor)",
-          } as React.CSSProperties
-        }
-        className={classNames("playerStatusContainer", { ["disabled"]: !isMe })}
+        className={classNames("playerStatusContainer", {
+          ["disabled"]: !isMe,
+          ["dealer"]: dealer,
+        })}
         onClick={() =>
           onBidChange
             ? setShowBidUI(true)

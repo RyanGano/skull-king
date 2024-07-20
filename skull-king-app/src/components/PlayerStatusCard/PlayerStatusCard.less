@@ -2,6 +2,7 @@
 @defaultGreenColor: #DDFFDD;
 @enabledButtonColor: #AAAAFF;
 @disabledButtonColor: #CCCCCC;
+@activePlayerColor: #8888DD;
 
 :root {
   --defaultBlueColor: @defaultBlueColor;
@@ -36,6 +37,10 @@
   min-width: 150px;
   min-height: 100px;
   cursor: pointer;
+
+  &.dealer {
+    outline: 4px auto @activePlayerColor;
+  }
 
   &.disabled {
     background-color: @disabledButtonColor;
