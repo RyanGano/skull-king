@@ -25,6 +25,7 @@
   display: flex;
   justify-content: center;
   font-weight: 800;
+  cursor: pointer;
 }
 
 .playerStatusContainer {
@@ -34,6 +35,12 @@
   border-radius: 12px;
   min-width: 150px;
   min-height: 100px;
+  cursor: pointer;
+
+  &.disabled {
+    background-color: @disabledButtonColor;
+    cursor: default;
+  }
 }
 
 .bonusInputContainer {
@@ -50,7 +57,7 @@
 
   &.disabled {
     color: var(--disabledButtonColor);
-    cursor: unset;
+    cursor: default;
   }
 }
 

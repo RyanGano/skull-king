@@ -180,6 +180,7 @@ const App = () => {
     <Stack gap={2}>
       <GameInfo
         game={game}
+        me={me!}
         editMyName={editPlayerName}
         startGame={
           game?.status === GameStatus.acceptingPlayers &&

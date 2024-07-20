@@ -3,19 +3,20 @@ import {
   CaretRightSquareFill,
 } from "react-bootstrap-icons";
 import classNames from "classnames";
-import { Game, GameStatus, PlayerRounds } from "../../types/game";
+import { Game, GameStatus, Player, PlayerRounds } from "../../types/game";
 import { PlayerStatusCard } from "../PlayerStatusCard/PlayerStatusCard";
 
 import "./PlayArea.less";
 
 interface PlayAreaProps {
   game: Game;
+  me: Player;
   moveToNextGameStatus: () => void;
   moveToPreviousGameStatus: () => void;
 }
 
 export const PlayArea = (props: PlayAreaProps) => {
-  const { game, moveToNextGameStatus, moveToPreviousGameStatus } = props;
+  const { game, me, moveToNextGameStatus, moveToPreviousGameStatus } = props;
 
   const gameState =
     game?.status === GameStatus.gameOver
@@ -49,11 +50,18 @@ export const PlayArea = (props: PlayAreaProps) => {
           <div className="playerStatusCardContainer">
             <PlayerStatusCard
               key={x.player.name}
+              isMe={game.players[index].id === me.id}
               playerRounds={x}
               turnPhase={game.status}
-              onBidChange={(newValue) => console.log("onBidChange", newValue)}
-              onScoreChange={(newValue) =>
-                console.log("onScoreChange", newValue)
+              onBidChange={
+                game.players[index].id === me.id
+                  ? (newValue) => console.log("onBidChange", newValue)
+                  : undefined
+              }
+              onScoreChange={
+                game.players[index].id === me.id
+                  ? (newValue) => console.log("onScoreChange", newValue)
+                  : undefined
               }
               dealer={
                 ((game.roundInfos.length ?? 0) - 1) % game.players.length ===

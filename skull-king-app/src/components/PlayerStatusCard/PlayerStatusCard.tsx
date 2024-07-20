@@ -9,6 +9,7 @@ import "./PlayerStatusCard.less";
 
 export interface PlayerStatusCardProps {
   playerRounds: PlayerRounds;
+  isMe: boolean;
   dealer?: boolean;
   turnPhase: GameStatus;
   onBidChange?: (newBid: number) => void;
@@ -16,7 +17,8 @@ export interface PlayerStatusCardProps {
 }
 
 export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
-  const { playerRounds, dealer, onBidChange, onScoreChange, turnPhase } = props;
+  const { playerRounds, isMe, dealer, onBidChange, onScoreChange, turnPhase } =
+    props;
   const [showBidUI, setShowBidUI] = useState<boolean>(false);
   const [showScoreUI, setShowScoreUI] = useState<boolean>(false);
   const [currentBonus, setCurrentBonus] = useState<number>(0);
@@ -162,7 +164,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
               : "var(--defaultGreenColor)",
           } as React.CSSProperties
         }
-        className="playerStatusContainer"
+        className={classNames("playerStatusContainer", { ["disabled"]: !isMe })}
         onClick={() =>
           onBidChange
             ? setShowBidUI(true)
@@ -193,7 +195,18 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
             </p>
           )}
 
-          <h5>{`Bid: ${currentRound.bid ?? 0}`}</h5>
+          {/* Bid hasn't been entered by this player yet. */}
+          {turnPhase === GameStatus.biddingOpen && !currentRound.bid && (
+            <h5>{`Bid: ...`}</h5>
+          )}
+          {/* Bid has been entered (only show if it's my bid). */}
+          {turnPhase === GameStatus.biddingOpen && !!currentRound.bid && (
+            <h5>{`Bid: ${isMe ? currentRound.bid ?? 0 : "?"}`}</h5>
+          )}
+          {/* All bids are public and round is starting. */}
+          {turnPhase === GameStatus.biddingClosed && (
+            <h5>{`Bid: ${currentRound.bid ?? 0}`}</h5>
+          )}
         </Stack>
       </div>
     </>
