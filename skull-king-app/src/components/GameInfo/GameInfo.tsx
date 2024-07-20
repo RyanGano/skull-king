@@ -4,6 +4,8 @@ import { useState } from "react";
 import { SimpleModal } from "../../common/simple-modal";
 import { TextInputArea } from "../../common/input-area/text-input-area";
 
+import "./GameInfo.less";
+
 export interface GameInfoProps {
   game: Game | null;
   me: Player;
@@ -63,18 +65,11 @@ export const GameInfo = (props: GameInfoProps) => {
       {game && <span>Game ID: {game?.id}</span>}
       {game && <span>Game Status: {mapGameStatus(game?.status)}</span>}
       {game && (
-        <Stack
-          direction="horizontal"
-          gap={3}
-          style={{ display: "flex", alignItems: "flex-start" }}
-        >
+        <Stack direction="horizontal" gap={3} className="playerList">
           <>Players:</>
           <Stack gap={2}>
             {game?.players?.map((x) => (
-              <div
-                key={x.id}
-                style={{ display: "flex", alignItems: "baseline" }}
-              >
+              <div key={x.id} className="playerDisplay">
                 {x.name}
                 {me.id === x.id ? (
                   <Button
