@@ -1,5 +1,5 @@
 import { Button, Stack } from "react-bootstrap";
-import { Game, GameStatus, Player } from "../../types/game";
+import { Game, Player } from "../../types/game";
 import { useState } from "react";
 import { SimpleModal } from "../../common/simple-modal";
 import { TextInputArea } from "../../common/input-area/text-input-area";
@@ -17,21 +17,6 @@ export const GameInfo = (props: GameInfoProps) => {
   const { game, me, editMyName, startGame } = props;
   const [showEditPlayerUI, setShowEditPlayerUI] = useState<boolean>(false);
   const [myUpdatedName, setMyUpdatedName] = useState<string>();
-
-  const mapGameStatus = (status?: GameStatus) => {
-    switch (status) {
-      case GameStatus.acceptingPlayers:
-        return "Accepting Players";
-      case GameStatus.biddingOpen:
-        return "Bidding Open";
-      case GameStatus.biddingClosed:
-        return "Bidding Closed";
-      case GameStatus.gameOver:
-        return "Game Over";
-      default:
-        return "";
-    }
-  };
 
   const getEditPlayerNameUI = () => {
     return (
@@ -62,9 +47,8 @@ export const GameInfo = (props: GameInfoProps) => {
           show={true}
         />
       )}
-      {game && <span>Game ID: {game?.id}</span>}
-      {game && <span>Game Status: {mapGameStatus(game?.status)}</span>}
-      {game && (
+      {game && startGame && <span>Game ID: {game?.id}</span>}
+      {game && startGame && (
         <Stack direction="horizontal" gap={3} className="playerList">
           <>Players:</>
           <Stack gap={2}>
