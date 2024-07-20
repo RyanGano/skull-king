@@ -2,13 +2,11 @@ import {
   CaretLeftSquareFill,
   CaretRightSquareFill,
 } from "react-bootstrap-icons";
+import classNames from "classnames";
 import { Game, GameStatus, PlayerRounds } from "../../types/game";
 import { PlayerStatusCard } from "../PlayerStatusCard/PlayerStatusCard";
 
-export const defaultBlueColor = "#DDDDFF";
-export const defaultGreenColor = "#DDFFDD";
-export const enabledButtonColor = "#AAAAFF";
-export const disabledButtonColor = "#CCCCCC";
+import "./PlayArea.less";
 
 interface PlayAreaProps {
   game: Game;
@@ -46,9 +44,9 @@ export const PlayArea = (props: PlayAreaProps) => {
 
   return (
     <>
-      <div className={"d-flex flex-wrap"}>
+      <div className="playAreaContainer">
         {playerStates.map((x, index) => (
-          <div style={{ flexGrow: 1 }}>
+          <div className="playerStatusCardContainer">
             <PlayerStatusCard
               key={x.player.name}
               playerRounds={x}
@@ -65,24 +63,20 @@ export const PlayArea = (props: PlayAreaProps) => {
           </div>
         ))}
 
-        {game.players.length % 2 === 1 && <div style={{ flex: "0 0 50%" }} />}
+        <div
+          className={`playerStatusSpacer ${
+            game.players.length % 2 === 1 ? "visible" : ""
+          }`}
+        />
       </div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          margin: 6,
-        }}
-      >
+      <div className="gameStatusContainer">
         <CaretLeftSquareFill
-          color={
-            game.roundInfos.length > 1 ||
-            game.status === GameStatus.biddingClosed
-              ? enabledButtonColor
-              : disabledButtonColor
-          }
-          size={36}
+          className={classNames("gameStatusNavButton", {
+            ["disabled"]: !(
+              game.roundInfos.length > 1 ||
+              game.status === GameStatus.biddingClosed
+            ),
+          })}
           onClick={() =>
             game.roundInfos.length > 1 ||
             game.status === GameStatus.biddingClosed
@@ -90,14 +84,11 @@ export const PlayArea = (props: PlayAreaProps) => {
               : null
           }
         />
-        <span style={{ fontWeight: 600 }}>{gameState}</span>
+        <span className="gameStatusText">{gameState}</span>
         <CaretRightSquareFill
-          color={
-            game.status !== GameStatus.gameOver
-              ? enabledButtonColor
-              : disabledButtonColor
-          }
-          size={36}
+          className={classNames("gameStatusNavButton", {
+            ["disabled"]: !(game.status !== GameStatus.gameOver),
+          })}
           onClick={() =>
             game.status !== GameStatus.gameOver ? moveToNextGameStatus() : null
           }

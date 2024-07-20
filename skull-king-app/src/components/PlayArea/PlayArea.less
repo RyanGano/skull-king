@@ -1,0 +1,40 @@
+
+@enabledButtonColor: #AAAAFF;
+@disabledButtonColor: #CCCCCC;
+
+.playAreaContainer {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.playerStatusCardContainer, .playerStatusSpacer {
+  flex-basis: calc(50%);
+}
+
+.playerStatusSpacer {
+    flex: 0 0 50%;
+    visibility: hidden;
+}
+
+.gameStatusContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 6px;
+}
+
+.gameStatusText {
+  font-weight: 600;
+}
+
+.gameStatusNavButton {
+  color: @enabledButtonColor;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+
+  &.disabled {
+    color: @disabledButtonColor;
+    cursor: unset;
+  }
+}

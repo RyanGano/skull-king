@@ -3,12 +3,11 @@ import { useEffect, useState } from "react";
 import { DashSquareFill, PlusSquareFill } from "react-bootstrap-icons";
 import { SimpleModal } from "../../common/simple-modal";
 import { GameStatus, PlayerRounds, Round } from "../../types/game";
-import {
-  defaultBlueColor,
-  defaultGreenColor,
-  disabledButtonColor,
-  enabledButtonColor,
-} from "../PlayArea";
+
+const defaultBlueColor = "#DDDDFF";
+const defaultGreenColor = "#DDFFDD";
+const enabledButtonColor = "#AAAAFF";
+const disabledButtonColor = "#CCCCCC";
 
 export interface PlayerStatusCardProps {
   playerRounds: PlayerRounds;
