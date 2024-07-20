@@ -1,13 +1,11 @@
 import Stack from "react-bootstrap/esm/Stack";
 import { useEffect, useState } from "react";
 import { DashSquareFill, PlusSquareFill } from "react-bootstrap-icons";
+import classNames from "classnames";
 import { SimpleModal } from "../../common/simple-modal";
 import { GameStatus, PlayerRounds, Round } from "../../types/game";
 
-const defaultBlueColor = "#DDDDFF";
-const defaultGreenColor = "#DDFFDD";
-const enabledButtonColor = "#AAAAFF";
-const disabledButtonColor = "#CCCCCC";
+import "./PlayerStatusCard.less";
 
 export interface PlayerStatusCardProps {
   playerRounds: PlayerRounds;
@@ -42,16 +40,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
       children.push(
         <div
           key={i}
-          style={{
-            margin: 6,
-            padding: 24,
-            backgroundColor: defaultBlueColor,
-            borderRadius: 12,
-            minWidth: 70,
-            display: "flex",
-            justifyContent: "center",
-            fontWeight: 800,
-          }}
+          className="numberDisplayContainer"
           onClick={
             onBidChange
               ? () => {
@@ -66,43 +55,28 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
         </div>
       );
     }
-    return <div className={"d-flex flex-wrap"}>{children}</div>;
+    return <div className="wrappingContainer">{children}</div>;
   };
 
   const getBonusUI = () => {
     return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
+      <div className="bonusInputContainer">
         <DashSquareFill
-          color={currentBonus > 0 ? enabledButtonColor : disabledButtonColor}
-          size={36}
+          className={classNames("bonusChangeButton", {
+            ["disabled"]: currentBonus <= 0,
+          })}
           onClick={() =>
             currentBonus > 0 ? setCurrentBonus(currentBonus - 10) : undefined
           }
         />
         <div
-          style={{
-            margin: 6,
-            padding: 24,
-            backgroundColor: defaultBlueColor,
-            borderRadius: 12,
-            maxWidth: 75,
-            minWidth: 70,
-            display: "flex",
-            justifyContent: "center",
-            fontWeight: 800,
-          }}
+          style={{ "--max-width": "75px" } as React.CSSProperties}
+          className="numberDisplayContainer"
         >
           {currentBonus}
         </div>
         <PlusSquareFill
-          color={enabledButtonColor}
-          size={36}
+          className="bonusChangeButton"
           onClick={() => setCurrentBonus(currentBonus + 10)}
         />
       </div>
@@ -120,17 +94,15 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
       tricksTaken.push(
         <div
           key={i}
-          style={{
-            margin: 6,
-            padding: 24,
-            backgroundColor:
-              currentTricksTaken === i ? defaultGreenColor : defaultBlueColor,
-            borderRadius: 12,
-            minWidth: 70,
-            display: "flex",
-            justifyContent: "center",
-            fontWeight: 800,
-          }}
+          style={
+            {
+              "--background-color":
+                currentTricksTaken === i
+                  ? "var(--defaultGreenColor)"
+                  : "var(--defaultBlueColor)",
+            } as React.CSSProperties
+          }
+          className="numberDisplayContainer"
           onClick={() => setCurrentTricksTaken(i)}
         >
           {i}
@@ -141,9 +113,9 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
     return (
       <Stack>
         <span>Tricks Taken</span>
-        <div className={"d-flex flex-wrap"}>{tricksTaken}</div>
+        <div className="wrappingContainer">{tricksTaken}</div>
         <span>Bonus Points</span>
-        <div className={"d-flex flex-wrap"}>{getBonusUI()}</div>
+        <div className="wrappingContainer">{getBonusUI()}</div>
       </Stack>
     );
   };
@@ -179,20 +151,18 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
         show={showScoreUI}
       />
       <div
-        style={{
-          margin: 6,
-          padding: 12,
-          backgroundColor: dealer
-            ? onBidChange
-              ? defaultGreenColor
-              : defaultBlueColor
-            : onBidChange
-            ? defaultBlueColor
-            : defaultGreenColor,
-          borderRadius: 12,
-          minWidth: 150,
-          minHeight: 100,
-        }}
+        style={
+          {
+            "--background-color": dealer
+              ? onBidChange
+                ? "var(--defaultGreenColor)"
+                : "var(--defaultBlueColor)"
+              : onBidChange
+              ? "var(--defaultBlueColor)"
+              : "var(--defaultGreenColor)",
+          } as React.CSSProperties
+        }
+        className="playerStatusContainer"
         onClick={() =>
           onBidChange
             ? setShowBidUI(true)
@@ -203,7 +173,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
       >
         <Stack>
           <h5>{playerRounds.player.name}</h5>
-          <span style={{ fontWeight: 600 }}>{`Score: ${playerRounds.rounds
+          <span className="scoreText">{`Score: ${playerRounds.rounds
             .map((x) => calculateRoundScore(x))
             .reduce((a, b) => a + b, 0)}`}</span>
           {turnPhase === GameStatus.biddingOpen && (

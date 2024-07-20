@@ -1,0 +1,59 @@
+@defaultBlueColor: #DDDDFF;
+@defaultGreenColor: #DDFFDD;
+@enabledButtonColor: #AAAAFF;
+@disabledButtonColor: #CCCCCC;
+
+:root {
+  --defaultBlueColor: @defaultBlueColor;
+  --defaultGreenColor: @defaultGreenColor;
+  --enabledButtonColor: @enabledButtonColor;
+  --disabledButtonColor: @disabledButtonColor;
+}
+
+.wrappingContainer {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.numberDisplayContainer {
+  margin: 6px;
+  padding: 24px;
+  background-color: var(--background-color, @defaultBlueColor);
+  border-radius: 12px;
+  min-width: 70px;
+  max-width: var(--max-width, unset);
+  display: flex;
+  justify-content: center;
+  font-weight: 800;
+}
+
+.playerStatusContainer {
+  margin: 6px;
+  padding: 12px;
+  background-color: var(--background-color, @defaultBlueColor);
+  border-radius: 12px;
+  min-width: 150px;
+  min-height: 100px;
+}
+
+.bonusInputContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bonusChangeButton {
+  color: var(--enabledButtonColor);
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+
+  &.disabled {
+    color: var(--disabledButtonColor);
+    cursor: unset;
+  }
+}
+
+.scoreText {
+  font-weight: 600;
+}
