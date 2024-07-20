@@ -47,9 +47,8 @@ export const PlayArea = (props: PlayAreaProps) => {
     <>
       <div className="playAreaContainer">
         {playerStates.map((x, index) => (
-          <div className="playerStatusCardContainer">
+          <div key={index} className="playerStatusCardContainer">
             <PlayerStatusCard
-              key={x.player.name}
               isMe={game.players[index].id === me.id}
               playerRounds={x}
               turnPhase={game.status}
