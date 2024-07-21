@@ -49,10 +49,10 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     var gameDto = await CreateNewGame("Test Player");
     var gameId = gameDto?.Id;
 
-    var game = await _dbContext.Games.Include(g => g.Players).FirstOrDefaultAsync(x => x.Id == gameId);
+    var game = await _dbContext.Games.Include(g => g.PlayerRoundInfo).ThenInclude(info => info.Player).FirstOrDefaultAsync(x => x.Id == gameId);
 
     Assert.NotNull(game);
-    Assert.Equal("Test Player", game.Players.Single().Name);
+    Assert.Equal("Test Player", game.PlayerRoundInfo.Single().Player?.Name);
     Assert.Equal(GameStatus.AcceptingPlayers, game.Status);
   }
 

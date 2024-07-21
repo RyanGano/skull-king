@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
 public static class GameRoutes
@@ -21,6 +22,9 @@ public static class GameRoutes
       }
 
       var game = Game.Create(gameId, new Player(gameInfo.PlayerName));
+      db.Players.Add(game.PlayerRoundInfo.Single().Player!);
+      db.Rounds.AddRange(game.PlayerRoundInfo.SelectMany(x => x.Rounds!));
+      db.PlayerRoundInfos.Add(game.PlayerRoundInfo.Single());
       db.Games.Add(game);
       await UpdateHashAndSaveAsync(db, game);
       await db.SaveChangesAsync();
@@ -74,8 +78,10 @@ public static class GameRoutes
         else
         {
           playerModel = new Player(player.Name!);
-          db.Players.Add(playerModel);
-          game.AddPlayer(playerModel);
+          var newPlayerRounds = game.AddPlayer(playerModel);
+          db.Players.Add(newPlayerRounds.Player!);
+          db.Rounds.AddRange(newPlayerRounds.Rounds);
+          db.PlayerRoundInfos.Add(newPlayerRounds);
         }
 
         db.Games.Update(game);
@@ -103,8 +109,8 @@ public static class GameRoutes
       try
       {
         game.StartGame();
+        db.Rounds.AddRange(game.PlayerRoundInfo.Select(x => x.Rounds!.Last()));
         db.Games.Update(game);
-        db.RoundInfos.AddRange(game.RoundInfos);
         await UpdateHashAndSaveAsync(db, game);
 
         await httpContext.Response.WriteAsJsonAsync(game);
@@ -120,26 +126,29 @@ public static class GameRoutes
 
   private static async Task<Game?> GetFullGame(string id, SkullKingDbContext db)
   {
-    return await db.Games
-      .Include(game => game.Players)
-      .Include(game => game.RoundInfos)
-        .ThenInclude(roundinfo => roundinfo.PlayerRounds)!
-        .ThenInclude(playerRound => playerRound.Round)
+    var game = await db.Games
+      .Include(g => g.PlayerRoundInfo)
+         .ThenInclude(info => info.Player)
+      .Include(g => g.PlayerRoundInfo)
+        .ThenInclude(info => info.Rounds)
       .Where(x => x.Id == id)
       .FirstOrDefaultAsync();
+
+    return game;
   }
 
   private static async Task UpdateHashAndSaveAsync(SkullKingDbContext db, Game game)
   {
+    var gameHash = game.GetHashCode().ToString();
     var existingHash = await db.Hashes.FindAsync(game.Id);
     if (existingHash is not null)
     {
-      existingHash.Value = game.GetHashCode().ToString();
+      existingHash.Value = gameHash;
       db.Hashes.Update(existingHash);
     }
     else
     {
-      db.Hashes.Add(new Hash { GameId = game.Id, Value = game.GetHashCode().ToString() });
+      db.Hashes.Add(new Hash { GameId = game.Id, Value = gameHash });
     }
 
     await db.SaveChangesAsync();

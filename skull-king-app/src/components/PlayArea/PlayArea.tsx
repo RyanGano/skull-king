@@ -3,7 +3,7 @@ import {
   CaretRightSquareFill,
 } from "react-bootstrap-icons";
 import classNames from "classnames";
-import { Game, GameStatus, Player, PlayerRounds } from "../../types/game";
+import { Game, GameStatus, Player } from "../../types/game";
 import { PlayerStatusCard } from "../PlayerStatusCard/PlayerStatusCard";
 
 import "./PlayArea.less";
@@ -22,9 +22,11 @@ export const PlayArea = (props: PlayAreaProps) => {
     game?.status === GameStatus.gameOver
       ? "Game Over"
       : game?.status === GameStatus.biddingClosed
-      ? `Bidding Closed (round ${game.roundInfos.length})`
+      ? `Bidding Closed (round ${
+          game.playerRoundInfo?.[0]?.rounds.length ?? 0
+        })`
       : game?.status === GameStatus.biddingOpen
-      ? `Bidding Open (round ${game.roundInfos.length})`
+      ? `Bidding Open (round ${game.playerRoundInfo?.[0]?.rounds.length ?? 0})`
       : "";
 
   if (!game) return null;
@@ -36,22 +38,23 @@ export const PlayArea = (props: PlayAreaProps) => {
   )
     return null;
 
+  const dealerId =
+    game.playerRoundInfo[
+      ((game.playerRoundInfo[0].rounds.length ?? 0) - 1) %
+        game.playerRoundInfo.length
+    ].player.id;
+
   // Put the current player at the top of the list so they always
   // know to look for their name. Other players should be in the
   // same order on all devices, but if not, it's OK.
-  const playerStates: PlayerRounds[] = game.players
-    .map((x) => ({
-      player: x,
-      rounds: game.roundInfos.flatMap((y) =>
-        y.playerRounds.filter((z) => z.player.id === x.id).map((z) => z.round)
-      ),
-    }))
-    .sort((a) => (a.player.id === me.id ? -1 : 0));
+  const playerRounds =
+    [...game.playerRoundInfo].sort((a) => (a.player.id === me.id ? -1 : 0)) ??
+    [];
 
   return (
     <>
       <div className="playAreaContainer">
-        {playerStates.map((x, index) => (
+        {playerRounds.map((x, index) => (
           <div key={index} className="playerStatusCardContainer">
             <PlayerStatusCard
               isMe={x.player.id === me.id}
@@ -67,17 +70,14 @@ export const PlayArea = (props: PlayAreaProps) => {
                   ? (newValue) => console.log("onScoreChange", newValue)
                   : undefined
               }
-              dealer={
-                ((game.roundInfos.length ?? 0) - 1) % game.players.length ===
-                index
-              }
+              dealer={x.player.id === dealerId}
             />
           </div>
         ))}
 
         <div
           className={`playerStatusSpacer ${
-            game.players.length % 2 === 1 ? "visible" : ""
+            (game.playerRoundInfo?.length ?? 0) % 2 === 1 ? "visible" : ""
           }`}
         />
       </div>
@@ -85,13 +85,13 @@ export const PlayArea = (props: PlayAreaProps) => {
         <CaretLeftSquareFill
           className={classNames("gameStatusNavButton", {
             ["disabled"]: !(
-              game.roundInfos.length > 1 ||
+              game.playerRoundInfo[0].rounds.length > 1 ||
               game.status === GameStatus.biddingClosed
             ),
-            ["hidden"]: !(game.players[0].id === me.id),
+            ["hidden"]: !(game.playerRoundInfo[0].player.id === me.id),
           })}
           onClick={() =>
-            game.roundInfos.length > 1 ||
+            game.playerRoundInfo[0].rounds.length > 1 ||
             game.status === GameStatus.biddingClosed
               ? moveToPreviousGameStatus()
               : null
@@ -101,7 +101,7 @@ export const PlayArea = (props: PlayAreaProps) => {
         <CaretRightSquareFill
           className={classNames("gameStatusNavButton", {
             ["disabled"]: !(game.status !== GameStatus.gameOver),
-            ["hidden"]: !(game.players[0].id === me.id),
+            ["hidden"]: !(game.playerRoundInfo[0].player.id === me.id),
           })}
           onClick={() =>
             game.status !== GameStatus.gameOver ? moveToNextGameStatus() : null

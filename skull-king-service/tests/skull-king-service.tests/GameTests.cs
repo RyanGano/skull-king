@@ -8,7 +8,7 @@ public class GameTests
     var game = Game.Create(new Player("Ryan"));
 
     Assert.NotNull(game);
-    Assert.True(game.Players.Single() is Player { Name: "Ryan", Id: { } });
+    Assert.True(game.PlayerRoundInfo.Single() is PlayerRounds { Player: { Name: "Ryan", Id: { } } });
     Assert.NotNull(game.Id);
     Assert.Equal(GameStatus.AcceptingPlayers, game.Status);
   }
@@ -17,21 +17,21 @@ public class GameTests
   public void CanAddPlayerToGame()
   {
     var game = Game.Create(new Player("Ryan"));
-    var controllingPlayer = game.Players.First();
+    var controllingPlayer = game.PlayerRoundInfo.First().Player;
 
     var newPlayer = new Player("Bob");
     game.AddPlayer(newPlayer);
 
-    Assert.Equal(new List<Player> { controllingPlayer, newPlayer }, game.Players);
+    Assert.Equal(new List<Player> { controllingPlayer!, newPlayer }, game.PlayerRoundInfo.Select(x => x.Player));
   }
 
   [Fact]
   public void CannotAddExistingPlayerToGame()
   {
     var game = Game.Create(new Player("Ryan"));
-    var controllingPlayer = game.Players.First();
+    var controllingPlayer = game.PlayerRoundInfo.First().Player;
 
-    Assert.Throws<ArgumentException>(() => game.AddPlayer(controllingPlayer));
+    Assert.Throws<ArgumentException>(() => game.AddPlayer(controllingPlayer!));
   }
 
   [Fact]
@@ -53,13 +53,13 @@ public class GameTests
   public void CanRemovePlayerFromGame()
   {
     var game = Game.Create(new Player("Ryan"));
-    var controllingPlayer = game.Players.First();
+    var controllingPlayer = game.PlayerRoundInfo.First().Player;
     var newPlayer = new Player("Bob");
     game.AddPlayer(newPlayer);
 
     game.RemovePlayer(newPlayer);
 
-    Assert.Equal(new List<Player> { controllingPlayer }, game.Players);
+    Assert.Equal(new List<Player> { controllingPlayer! }, game.PlayerRoundInfo.Select(x => x.Player));
   }
 
   [Fact]
@@ -78,11 +78,11 @@ public class GameTests
   public void CannotRemoveFirstPlayerFromGame()
   {
     var game = Game.Create(new Player("Ryan"));
-    var controllingPlayer = game.Players.First();
+    var controllingPlayer = game.PlayerRoundInfo.First().Player;
     var newPlayer = new Player("Bob");
     game.AddPlayer(newPlayer);
 
-    Assert.Throws<ArgumentException>(() => game.RemovePlayer(controllingPlayer));
+    Assert.Throws<ArgumentException>(() => game.RemovePlayer(controllingPlayer!));
   }
 
   [Fact]
@@ -93,8 +93,8 @@ public class GameTests
 
     game.StartGame();
 
-    Assert.True(game.RoundInfos.Count == 1);
-    Assert.Equal(1, game.RoundInfos.First().PlayerRounds!.Select(x => x.Round!.MaxBid).Distinct().Single());
+    Assert.True(game.PlayerRoundInfo.First().Rounds!.Count == 1);
+    Assert.Equal(1, game.PlayerRoundInfo.SelectMany(x => x.Rounds!.Select(y => y.MaxBid!)).Distinct().Single());
     Assert.Equal(GameStatus.BiddingOpen, game.Status);
   }
 

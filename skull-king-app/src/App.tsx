@@ -95,7 +95,7 @@ const App = () => {
       } else {
         setGame(result.data);
         startUpdateTimer(result.data?.id);
-        setMe(result.data.players[0]);
+        setMe((result.data as Game).playerRoundInfo[0].player);
       }
     },
     [startUpdateTimer]
@@ -147,8 +147,8 @@ const App = () => {
   const startGame = useCallback(async () => {
     if (
       !game?.id ||
-      game.players?.length < 2 ||
-      game.players[0].id !== me?.id
+      game.playerRoundInfo?.length < 2 ||
+      game.playerRoundInfo[0].player.id !== me?.id
     ) {
       console.log("Cannot start game");
       return;
@@ -161,7 +161,7 @@ const App = () => {
     } else {
       updateGame(game.id, currentHashRef.current ?? "");
     }
-  }, [game?.id, game?.players, me?.id, updateGame]);
+  }, [game?.id, game?.playerRoundInfo, me?.id, updateGame]);
 
   const showOptionalPopup = useCallback(() => {
     return game && game.status !== GameStatus.gameOver
@@ -184,8 +184,8 @@ const App = () => {
         editMyName={editPlayerName}
         startGame={
           game?.status === GameStatus.acceptingPlayers &&
-          (game.players?.length ?? 0) > 1 &&
-          game?.players?.[0].id === me?.id
+          (game.playerRoundInfo?.length ?? 0) > 1 &&
+          game?.playerRoundInfo?.[0].player.id === me?.id
             ? startGame
             : undefined
         }

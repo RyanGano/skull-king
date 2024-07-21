@@ -1,16 +1,16 @@
 namespace skull_king_service.tests;
 
-public class PlayerRoundTests
+public class PlayerRoundsTests
 {
   [Fact]
   public void CanCreateValidPlayerRound()
   {
     var player = new Player("Ryan");
-    var round = new Round(2);
-    var playerRound = PlayerRound.Create(player, round);
+    var playerRounds = PlayerRounds.Create(player);
+    playerRounds.AddRound();
 
-    Assert.NotNull(playerRound);
-    Assert.Equal(player, playerRound.Player);
-    Assert.Equal(round, playerRound.Round);
+    Assert.NotNull(playerRounds);
+    Assert.Equal(player, playerRounds.Player);
+    Assert.Equal(1, playerRounds.Rounds?.Single().MaxBid);
   }
 }

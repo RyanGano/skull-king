@@ -18,26 +18,17 @@ export type Player = {
   name: string;
 };
 
-export type PlayerRound = {
-  id: string;
-  player: Player;
-  round: Round;
-};
 
-export type RoundInfo = {
-  id: string;
-  playerRounds: PlayerRound[];
-};
 
 export type Game = {
   id: string;
-  players: Player[];
   status: GameStatus;
-  roundInfos: RoundInfo[];
+  playerRoundInfo: PlayerRounds[];
   hash: string;
 };
 
 export type PlayerRounds = {
+  id: string;
   player: Player;
   rounds: Round[];
 };

@@ -1,17 +1,17 @@
+using System.Text.Json;
+
 public record Game
 {
   public required string Id { get; init; }
-  public IReadOnlyList<Player> Players => EditablePlayers;
   public GameStatus Status { get; private set; }
-  public IReadOnlyList<RoundInfo> RoundInfos => EditableRoundInfos;
+  public IReadOnlyList<PlayerRounds> PlayerRoundInfo => EditablePlayerRoundInfo;
 
   public static Game Create(Player controllingPlayer)
   {
     return new Game
     {
       Id = new GameId().Value,
-      EditablePlayers = new List<Player> { controllingPlayer },
-      EditableRoundInfos = new List<RoundInfo>()
+      EditablePlayerRoundInfo = new List<PlayerRounds> { PlayerRounds.Create(controllingPlayer) },
     };
   }
 
@@ -20,43 +20,46 @@ public record Game
     return new Game
     {
       Id = gameId.Value,
-      EditablePlayers = new List<Player> { controllingPlayer },
-      EditableRoundInfos = new List<RoundInfo>()
+      EditablePlayerRoundInfo = new List<PlayerRounds> { PlayerRounds.Create(controllingPlayer) },
     };
   }
 
-  public void AddPlayer(Player player)
+  public PlayerRounds AddPlayer(Player player)
   {
-    if (Players.Contains(player))
+    if (PlayerRoundInfo.Any(x => x.Player == player))
       throw new ArgumentException("Player already in game");
-    if (Players.Count == c_maxPlayers)
+    if (PlayerRoundInfo.Count == c_maxPlayers)
       throw new ArgumentException($"Cannot have more than {c_maxPlayers} in a game.");
 
-    EditablePlayers.Add(player);
+    var playerRounds = PlayerRounds.Create(player);
+    EditablePlayerRoundInfo.Add(playerRounds);
+    return playerRounds;
   }
 
   public void RemovePlayer(Player player)
   {
-    var indexOfPlayer = EditablePlayers.IndexOf(player);
+    var indexOfPlayer = EditablePlayerRoundInfo.FindIndex(x => x.Player == player);
     if (indexOfPlayer == -1)
       throw new ArgumentException("Player not found");
     if (indexOfPlayer == 0)
       throw new ArgumentException("Cannot remove first player");
 
-    EditablePlayers.Remove(player);
+    EditablePlayerRoundInfo.Remove(EditablePlayerRoundInfo.Single(x => x.Player == player));
   }
 
   public void StartGame()
   {
-    if (Players.Count < c_minPlayers)
+    if (PlayerRoundInfo.Count < c_minPlayers)
       throw new InvalidOperationException("Cannot start game with less than 2 players");
 
     Status = GameStatus.BiddingOpen;
-    EditableRoundInfos.Add(RoundInfo.Create(Players, 1));
+    EditablePlayerRoundInfo.ForEach(x => x.AddRound());
   }
 
   public override int GetHashCode()
-  => HashCode.Combine(Id, HashUtility.CombineHashCodes(Players), Status, HashUtility.CombineHashCodes(RoundInfos));
+  {
+    return JsonSerializer.Serialize(this).GetHashCode();
+  }
 
   internal GameDto MapToDto()
   {
@@ -64,21 +67,18 @@ public record Game
     {
       Id = Id,
       Hash = GetHashCode().ToString(),
-      Players = Players.Select(x => x.MapToDto()).ToList(),
       Status = Status,
-      RoundInfos = RoundInfos.Select(x => x.MapToDto()).ToList()
+      PlayerRoundInfo = PlayerRoundInfo.Select(x => x.MapToDto()).ToList(),
     };
   }
 
   private Game()
   {
-    EditablePlayers = new List<Player>();
-    EditableRoundInfos = new List<RoundInfo>();
     Status = GameStatus.AcceptingPlayers;
+    EditablePlayerRoundInfo = new List<PlayerRounds>();
   }
 
   private const int c_minPlayers = 2;
   private const int c_maxPlayers = 8;
-  private List<Player> EditablePlayers { get; init; }
-  private List<RoundInfo> EditableRoundInfos { get; init; }
+  private List<PlayerRounds> EditablePlayerRoundInfo { get; init; }
 }

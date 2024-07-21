@@ -54,10 +54,10 @@ export const GameInfo = (props: GameInfoProps) => {
         <Stack direction="horizontal" gap={3} className="playerList">
           <>Players:</>
           <Stack gap={2}>
-            {game?.players?.map((x) => (
-              <div key={x.id} className="playerDisplay">
-                {x.name}
-                {me.id === x.id ? (
+            {game?.playerRoundInfo.map((x) => (
+              <div key={x.player.id} className="playerDisplay">
+                {x.player.name}
+                {me.id === x.player.id ? (
                   <Button
                     variant="link"
                     className={"textLink"}
