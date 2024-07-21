@@ -88,6 +88,7 @@ export const PlayArea = (props: PlayAreaProps) => {
               game.roundInfos.length > 1 ||
               game.status === GameStatus.biddingClosed
             ),
+            ["hidden"]: !(game.players[0].id === me.id),
           })}
           onClick={() =>
             game.roundInfos.length > 1 ||
@@ -100,6 +101,7 @@ export const PlayArea = (props: PlayAreaProps) => {
         <CaretRightSquareFill
           className={classNames("gameStatusNavButton", {
             ["disabled"]: !(game.status !== GameStatus.gameOver),
+            ["hidden"]: !(game.players[0].id === me.id),
           })}
           onClick={() =>
             game.status !== GameStatus.gameOver ? moveToNextGameStatus() : null
