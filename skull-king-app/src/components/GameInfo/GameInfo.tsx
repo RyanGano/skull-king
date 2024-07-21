@@ -1,5 +1,5 @@
 import { Button, Stack } from "react-bootstrap";
-import { Game, Player } from "../../types/game";
+import { Game, GameStatus, Player } from "../../types/game";
 import { useState } from "react";
 import { SimpleModal } from "../../common/simple-modal";
 import { TextInputArea } from "../../common/input-area/text-input-area";
@@ -47,8 +47,10 @@ export const GameInfo = (props: GameInfoProps) => {
           show={true}
         />
       )}
-      {game && startGame && <span>Game ID: {game?.id}</span>}
-      {game && startGame && (
+      {game?.status === GameStatus.acceptingPlayers && (
+        <span>Game ID: {game?.id}</span>
+      )}
+      {game?.status === GameStatus.acceptingPlayers && (
         <Stack direction="horizontal" gap={3} className="playerList">
           <>Players:</>
           <Stack gap={2}>
