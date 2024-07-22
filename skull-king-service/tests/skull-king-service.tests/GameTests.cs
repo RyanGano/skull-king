@@ -107,6 +107,16 @@ public class GameTests
   }
 
   [Fact]
+  public void CannotAddPlayerToExistingGame()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.StartGame();
+
+    Assert.Throws<ArgumentException>(() => game.AddPlayer(new Player("Too late")));
+  }
+
+  [Fact]
   public void GameHashesAreNotEqual()
   {
     var player = new Player("Ryan");

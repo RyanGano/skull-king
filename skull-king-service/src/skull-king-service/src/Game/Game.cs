@@ -30,6 +30,8 @@ public record Game
       throw new ArgumentException("Player already in game");
     if (PlayerRoundInfo.Count == c_maxPlayers)
       throw new ArgumentException($"Cannot have more than {c_maxPlayers} in a game.");
+    if (Status != GameStatus.AcceptingPlayers)
+      throw new ArgumentException($"Cannot add player at this time.");
 
     var playerRounds = PlayerRounds.Create(player);
     EditablePlayerRoundInfo.Add(playerRounds);
