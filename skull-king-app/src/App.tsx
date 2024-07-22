@@ -154,7 +154,7 @@ const App = () => {
       return;
     }
 
-    const result = await callGetRoute(StartGameUri(game.id));
+    const result = await callGetRoute(StartGameUri(game.id, me.id));
 
     if (result.status !== 200) {
       console.log("Could not start game", result.status, result.statusText);

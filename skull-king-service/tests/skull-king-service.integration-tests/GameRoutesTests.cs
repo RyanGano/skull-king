@@ -187,8 +187,10 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
 
-  [Fact]
-  public async Task CanStartGame()
+  [Theory]
+  [InlineData(0, true)]
+  [InlineData(1, false)]
+  public async Task OnlyControllingPlayerCanStartGame(int playerIndex, bool canStart)
   {
     var createdGame = await CreateNewGame("Player 1");
     var gameId = createdGame?.Id;
@@ -197,8 +199,14 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     var playerContent = JsonContent.Create(newPlayer);
     await _client.PutAsync($"/games/{gameId}/players", playerContent);
 
-    var response = await _client.GetAsync($"/games/{gameId}/start");
-    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    var game = GetGame(gameId);
+
+    var response = await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[playerIndex].Player.Id}");
+
+    if (canStart)
+      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    else
+      Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
   }
 
   private async Task<GameDto?> CreateNewGame(string playerName)
@@ -211,5 +219,10 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
 
     return responseGame;
+  }
+
+  private Game GetGame(string gameId)
+  {
+    return _dbContext.Games.Include(g => g.PlayerRoundInfo).ThenInclude(info => info.Player).FirstOrDefault(x => x.Id == gameId);
   }
 }

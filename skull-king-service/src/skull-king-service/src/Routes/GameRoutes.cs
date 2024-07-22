@@ -97,12 +97,18 @@ public static class GameRoutes
     .WithName("AddPlayerToGame")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}/start", async (string id, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapGet("/games/{id}/start", async (string id, Guid playerId, HttpContext httpContext, SkullKingDbContext db) =>
     {
       var game = await GetFullGame(id, db);
       if (game is null)
       {
         httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+      }
+
+      if (game.PlayerRoundInfo.First().Player!.Id != playerId)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
         return;
       }
 
