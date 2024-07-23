@@ -127,4 +127,112 @@ public class GameTests
 
     Assert.NotEqual(originalHashCode, game.GetHashCode());
   }
+
+  [Fact]
+  public void CanMoveGameToNextPhase()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.StartGame();
+
+    game.MoveToNextPhase();
+
+    Assert.Equal(GameStatus.BiddingClosed, game.Status);
+    Assert.Equal(1, game.PlayerRoundInfo.Select(x => x.Rounds!.Count).Distinct().Single());
+  }
+
+  [Fact]
+  public void CanMoveGameThroughAllPhases()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.StartGame();
+
+    for (int i = 0; i < 20; i++)
+      game.MoveToNextPhase();
+
+    Assert.Equal(GameStatus.GameOver, game.Status);
+    Assert.Equal(10, game.PlayerRoundInfo.Select(x => x.Rounds!.Count).Distinct().Single());
+  }
+
+  [Fact]
+  public void CannotMoveGamePastEndOfGame()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.StartGame();
+
+    for (int i = 0; i < 20; i++)
+      game.MoveToNextPhase();
+
+    Assert.Throws<InvalidOperationException>(() => game.MoveToNextPhase());
+  }
+
+
+  [Fact]
+  public void CanMoveGameToPreviousPhase()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.StartGame();
+
+    game.PlayerRoundInfo[0].SetBid(1);
+    game.PlayerRoundInfo[1].SetBid(1);
+    var gameHash = game.GetHashCode();
+
+    game.MoveToNextPhase();
+    game.PlayerRoundInfo[0].SetScore(1, 10);
+    game.PlayerRoundInfo[1].SetScore(0, 0);
+    game.MoveToPreviousPhase();
+
+    Assert.Equal(GameStatus.BiddingOpen, game.Status);
+    Assert.Equal(gameHash, game.GetHashCode());
+  }
+
+  [Fact]
+  public void CanMoveGameBackwardThroughAllPhases()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.StartGame();
+
+    int? gameHash = null;
+
+    for (int i = 0; i < 10; i++)
+    {
+      // Set a bid for each player
+      game.PlayerRoundInfo[0].SetBid(s_rand.Next(0, i + 1));
+      game.PlayerRoundInfo[1].SetBid(s_rand.Next(0, i + 1));
+
+      // Store the "starting" game state (we never move before the very first bid)
+      // so we need to get the state after the first bid's are made
+      gameHash ??= game.GetHashCode();
+
+      game.MoveToNextPhase();
+      // Set a Score for each player
+      game.PlayerRoundInfo[0].SetScore(s_rand.Next(0, i + 1), 0);
+      game.PlayerRoundInfo[1].SetScore(s_rand.Next(0, i + 1), 0);
+      game.MoveToNextPhase();
+    }
+
+    Assert.Equal(GameStatus.GameOver, game.Status);
+
+    for (int i = 0; i < 20; i++)
+      game.MoveToPreviousPhase();
+
+    Assert.Equal(GameStatus.BiddingOpen, game.Status);
+    Assert.Equal(gameHash!.Value, game.GetHashCode());
+  }
+
+  [Fact]
+  public void CannotMoveGameBackwardPastBeginningOfGame()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.StartGame();
+
+    Assert.Throws<InvalidOperationException>(() => game.MoveToPreviousPhase());
+  }
+
+  private static Random s_rand = new Random();
 }

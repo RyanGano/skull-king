@@ -199,14 +199,37 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     var playerContent = JsonContent.Create(newPlayer);
     await _client.PutAsync($"/games/{gameId}/players", playerContent);
 
-    var game = GetGame(gameId);
+    var game = GetGame(gameId!);
 
-    var response = await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[playerIndex].Player.Id}");
-
+    var response = await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[playerIndex].Player!.Id}&knownHash={game.GetHashCode()}");
     if (canStart)
+    {
       Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+      game = GetGame(gameId!);
+      Assert.Equal(GameStatus.BiddingOpen, game.Status);
+      Assert.Equal(1, game.PlayerRoundInfo.Select(x => x.Rounds!.Count).Distinct().Single());
+    }
     else
+    {
       Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+  }
+
+  [Fact]
+  public async Task CannotStartGameWithOutdatedHash()
+  {
+    var createdGame = await CreateNewGame("Player 1");
+    var gameId = createdGame?.Id;
+
+    var newPlayer = new PlayerDto { Name = "Player 2" };
+    var playerContent = JsonContent.Create(newPlayer);
+    await _client.PutAsync($"/games/{gameId}/players", playerContent);
+
+    var game = GetGame(gameId!);
+
+    var response = await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={gameId!.GetHashCode() + 1}");
+
+    Assert.Equal(HttpStatusCode.PreconditionFailed, response.StatusCode);
   }
 
   private async Task<GameDto?> CreateNewGame(string playerName)
@@ -221,8 +244,37 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     return responseGame;
   }
 
+  [Fact]
+  public async Task CanMoveGameToNextPhase()
+  {
+    var createdGame = await CreateNewGame("Player 1");
+    var gameId = createdGame?.Id;
+
+    var newPlayer = new PlayerDto { Name = "Player 2" };
+    var playerContent = JsonContent.Create(newPlayer);
+    await _client.PutAsync($"/games/{gameId}/players", playerContent);
+    var game = GetGame(gameId!);
+
+    await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    game = GetGame(gameId!);
+
+    var response = await _client.GetAsync($"/games/{gameId}/movenext?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    game = GetGame(gameId!);
+    Assert.Equal(GameStatus.BiddingClosed, game.Status);
+    Assert.Equal(1, game.PlayerRoundInfo.Select(x => x.Rounds!.Count).Distinct().Single());
+  }
+
   private Game GetGame(string gameId)
   {
-    return _dbContext.Games.Include(g => g.PlayerRoundInfo).ThenInclude(info => info.Player).FirstOrDefault(x => x.Id == gameId);
+    return _dbContext.Games
+      .Include(g => g.PlayerRoundInfo)
+         .ThenInclude(info => info.Player)
+      .Include(g => g.PlayerRoundInfo)
+        .ThenInclude(info => info.Rounds)
+      .Where(x => x.Id == gameId)
+      .AsNoTracking()
+      .FirstOrDefault()!;
   }
 }

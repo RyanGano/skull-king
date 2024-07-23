@@ -10,25 +10,39 @@ public record Round
     Id = Guid.NewGuid();
   }
 
-  public Round WithBid(int bid)
+  public Round SetBid(int bid)
   {
     if (bid < 0 || bid > MaxBid)
       throw new ArgumentException("Bid must be between 0 and the max bid");
 
-    return this with { Bid = bid };
+    Bid = bid;
+    return this;
   }
 
-  public Round WithTricksTaken(int tricksTaken)
+  public Round ClearBid()
+  {
+    Bid = null;
+    return this;
+  }
+
+  public Round SetTricksTaken(int tricksTaken)
   {
     if (Bid is null)
       throw new ArgumentException("Cannot set tricks taken without a bid");
     if (tricksTaken < 0 || tricksTaken > MaxBid)
       throw new ArgumentException("Tricks taken must be between 0 and the max bid");
 
-    return this with { TricksTaken = tricksTaken };
+    TricksTaken = tricksTaken;
+    return this;
   }
 
-  public Round WithBonus(int bonus)
+  public Round ClearTricksTaken()
+  {
+    TricksTaken = null;
+    return this;
+  }
+
+  public Round SetBonus(int bonus)
   {
     if (bonus != 0)
     {
@@ -40,7 +54,13 @@ public record Round
         throw new ArgumentException("Bonus must be between a positive multiple of 10");
     }
 
-    return this with { Bonus = bonus };
+    Bonus = bonus;
+    return this;
+  }
+
+  public void ClearBonus()
+  {
+    Bonus = null;
   }
 
   public int GetScore()
@@ -71,8 +91,8 @@ public record Round
   }
 
   public Guid Id { get; init; } = Guid.NewGuid();
-  public int MaxBid { get; init; }
-  public int? Bid { get; init; }
-  public int? TricksTaken { get; init; }
-  public int? Bonus { get; init; }
+  public int MaxBid { get; private set; }
+  public int? Bid { get; private set; }
+  public int? TricksTaken { get; private set; }
+  public int? Bonus { get; private set; }
 }

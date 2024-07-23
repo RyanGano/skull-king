@@ -63,6 +63,68 @@ public record Game
     return JsonSerializer.Serialize(this).GetHashCode();
   }
 
+  public void MoveToNextPhase()
+  {
+    if (Status == GameStatus.AcceptingPlayers)
+      throw new InvalidOperationException("Cannot move to next phase until game has started");
+    if (Status == GameStatus.GameOver)
+      throw new InvalidOperationException("Cannot move to next phase after game has ended");
+
+    if (Status == GameStatus.BiddingOpen)
+    {
+      // Make sure all players have made a bid (use 0 as default if they have not)
+      foreach (var playerWithNoBid in PlayerRoundInfo.Where(x => x.Rounds!.Last().Bid is null))
+        playerWithNoBid.SetBid(0);
+
+      Status = GameStatus.BiddingClosed;
+    }
+    else if (Status == GameStatus.BiddingClosed)
+    {
+      // Make sure all players have entered a score (use 0 as default if they have not)
+      foreach (var playerWithNoScore in PlayerRoundInfo.Where(x => x.Rounds![^1] is { TricksTaken: null } or { Bonus: null }))
+        playerWithNoScore.SetScore(playerWithNoScore.Rounds![^1].TricksTaken ?? 0, playerWithNoScore.Rounds![^1].Bonus ?? 0);
+
+      // Check if the game is over
+      if (PlayerRoundInfo[0].Rounds!.Count == 10)
+      {
+        Status = GameStatus.GameOver;
+        return;
+      }
+
+      // Now add a new round to each player
+      foreach (var playerRoundInfo in PlayerRoundInfo)
+        playerRoundInfo.AddRound();
+
+      Status = GameStatus.BiddingOpen;
+    }
+  }
+
+  public void MoveToPreviousPhase()
+  {
+    if (Status == GameStatus.BiddingOpen && PlayerRoundInfo[0].Rounds!.Count == 1)
+      throw new InvalidOperationException("Cannot move to phase earlier than the beginning of the game.");
+
+    if (Status == GameStatus.BiddingClosed)
+    {
+      // Clear all of the TricksTaken and Bonuses for the current round
+      foreach (var playerRoundInfo in PlayerRoundInfo)
+        playerRoundInfo.ClearScore();
+
+      Status = GameStatus.BiddingOpen;
+    }
+    else if (Status == GameStatus.BiddingOpen)
+    {
+      foreach (var playerRoundInfo in PlayerRoundInfo)
+        playerRoundInfo.RemoveLastRound();
+
+      Status = GameStatus.BiddingClosed;
+    }
+    else if (Status == GameStatus.GameOver)
+    {
+      Status = GameStatus.BiddingClosed;
+    }
+  }
+
   internal GameDto MapToDto()
   {
     return new GameDto

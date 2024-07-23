@@ -97,8 +97,17 @@ public static class GameRoutes
     .WithName("AddPlayerToGame")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}/start", async (string id, Guid playerId, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapGet("/games/{id}/start", async (string id, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
     {
+      // Check the knownHash compared to current stored hash
+      // Do not allow updates if the user's hash doesn't match the current hash
+      var currentHash = db.Hashes.Find(id);
+      if (currentHash?.Value != knownHash)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status412PreconditionFailed;
+        return;
+      }
+
       var game = await GetFullGame(id, db);
       if (game is null)
       {
@@ -116,6 +125,7 @@ public static class GameRoutes
       {
         game.StartGame();
         db.Rounds.AddRange(game.PlayerRoundInfo.Select(x => x.Rounds!.Last()));
+        db.PlayerRoundInfos.UpdateRange(game.PlayerRoundInfo);
         db.Games.Update(game);
         await UpdateHashAndSaveAsync(db, game);
 
@@ -127,6 +137,45 @@ public static class GameRoutes
       }
     })
     .WithName("StartGame")
+    .RequireCors(cors);
+
+    app.MapGet("/games/{id}/movenext", async (string id, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    {
+      var game = await GetFullGame(id, db);
+      if (game is null)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+      }
+
+      if (game.PlayerRoundInfo.First().Player!.Id != playerId)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return;
+      }
+
+      // Check the knownHash compared to current stored hash
+      // Do not allow updates if the user's hash doesn't match the current hash
+      var currentHash = db.Hashes.Find(id);
+      if (currentHash?.Value != knownHash)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
+        return;
+      }
+
+      // Move the game to the next phase
+      game.MoveToNextPhase();
+
+      // Store the new data in the database as needed
+      if (game.Status == GameStatus.BiddingOpen)
+        db.Rounds.AddRange(game.PlayerRoundInfo.Select(x => x.Rounds!.Last()));
+      // else
+      //  db.Rounds.UpdateRange(game.PlayerRoundInfo.Select(x => x.Rounds!.Last()));
+
+      db.Games.Update(game);
+      await UpdateHashAndSaveAsync(db, game);
+    })
+    .WithName("MoveToNextPhase")
     .RequireCors(cors);
   }
 

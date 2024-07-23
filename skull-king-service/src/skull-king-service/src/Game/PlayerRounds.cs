@@ -12,6 +12,14 @@ public record PlayerRounds
     EditablePlayerRounds!.Add(new Round(Rounds.Count + 1));
   }
 
+  public void RemoveLastRound()
+  {
+    if (EditablePlayerRounds!.Count == 1)
+      throw new InvalidOperationException("Cannot remove round before round has started");
+
+    EditablePlayerRounds!.RemoveAt(EditablePlayerRounds.Count - 1);
+  }
+
   public static PlayerRounds Create(Player player)
   {
     return new PlayerRounds
@@ -20,6 +28,40 @@ public record PlayerRounds
       Player = player,
       EditablePlayerRounds = new List<Round>()
     };
+  }
+
+  public void SetBid(int bid)
+  {
+    if (Rounds!.Count == 0)
+      throw new InvalidOperationException("Cannot set bid before round has started");
+
+    Rounds[^1].SetBid(bid);
+  }
+
+  public void ClearBid()
+  {
+    if (Rounds!.Count == 0)
+      throw new InvalidOperationException("Cannot set bid before round has started");
+
+    Rounds[^1].ClearBid();
+  }
+
+  public void SetScore(int tricksTaken, int bonus)
+  {
+    if (Rounds!.Count == 0)
+      throw new InvalidOperationException("Cannot set score before round has started");
+
+    EditablePlayerRounds[^1].SetTricksTaken(tricksTaken);
+    EditablePlayerRounds[^1].SetBonus(bonus);
+  }
+
+  public void ClearScore()
+  {
+    if (Rounds!.Count == 0)
+      throw new InvalidOperationException("Cannot set score before round has started");
+
+    EditablePlayerRounds[^1].ClearTricksTaken();
+    EditablePlayerRounds[^1].ClearBonus();
   }
 
   internal PlayerRoundsDto MapToDto()

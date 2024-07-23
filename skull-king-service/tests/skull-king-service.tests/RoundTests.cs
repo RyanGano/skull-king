@@ -27,14 +27,15 @@ public class RoundTests
     for (int i = 1; i < 11; i++)
     {
       var round = new Round(i);
+      var roundId = round.Id;
 
       for (int j = 0; j <= i; j++)
       {
-        var updatedRound = round.WithBid(j);
+        round.SetBid(j);
 
-        Assert.NotNull(updatedRound);
-        Assert.Equal(j, updatedRound.Bid);
-        Assert.Equal(round.Id, updatedRound.Id);
+        Assert.NotNull(round);
+        Assert.Equal(j, round.Bid);
+        Assert.Equal(round.Id, round.Id);
       }
     }
   }
@@ -46,7 +47,7 @@ public class RoundTests
   {
     var round = new Round(maxBid);
 
-    Assert.Throws<ArgumentException>(() => round.WithBid(bid));
+    Assert.Throws<ArgumentException>(() => round.SetBid(bid));
   }
 
   [Fact]
@@ -54,15 +55,16 @@ public class RoundTests
   {
     for (int i = 1; i < 11; i++)
     {
-      var round = new Round(i).WithBid(0);
+      var round = new Round(i).SetBid(0);
+      var roundId = round.Id;
 
       for (int j = 0; j <= i; j++)
       {
-        var updatedRound = round.WithTricksTaken(j);
+        round.SetTricksTaken(j);
 
-        Assert.NotNull(updatedRound);
-        Assert.Equal(j, updatedRound.TricksTaken);
-        Assert.Equal(round.Id, updatedRound.Id);
+        Assert.NotNull(round);
+        Assert.Equal(j, round.TricksTaken);
+        Assert.Equal(roundId, round.Id);
       }
     }
   }
@@ -72,9 +74,9 @@ public class RoundTests
   [InlineData(5, -1)]
   public void ThrowsOnBadTricksTaken(int maxBid, int tricksTaken)
   {
-    var round = new Round(maxBid).WithBid(5);
+    var round = new Round(maxBid).SetBid(5);
 
-    Assert.Throws<ArgumentException>(() => round.WithTricksTaken(tricksTaken));
+    Assert.Throws<ArgumentException>(() => round.SetTricksTaken(tricksTaken));
   }
 
   [Fact]
@@ -82,20 +84,22 @@ public class RoundTests
   {
     var round = new Round(5);
 
-    Assert.Throws<ArgumentException>(() => round.WithTricksTaken(2));
+    Assert.Throws<ArgumentException>(() => round.SetTricksTaken(2));
   }
 
   [Fact]
   public void CanUpdateBonus()
   {
-    var round = new Round(10).WithBid(2).WithTricksTaken(2);
+    var round = new Round(10).SetBid(2).SetTricksTaken(2);
+    var roundId = round.Id;
+
     for (int i = 0; i < 100; i += 10)
     {
-      var updatedRound = round.WithBonus(i);
+      round.SetBonus(i);
 
-      Assert.NotNull(updatedRound);
-      Assert.Equal(i, updatedRound.Bonus);
-      Assert.Equal(round.Id, updatedRound.Id);
+      Assert.NotNull(round);
+      Assert.Equal(i, round.Bonus);
+      Assert.Equal(roundId, round.Id);
     }
   }
 
@@ -106,21 +110,22 @@ public class RoundTests
   [InlineData(9)]
   public void ThrowsOnBadBonus(int bonus)
   {
-    var round = new Round(10).WithBid(2).WithTricksTaken(2);
+    var round = new Round(10).SetBid(2).SetTricksTaken(2);
 
-    Assert.Throws<ArgumentException>(() => round.WithBonus(bonus));
+    Assert.Throws<ArgumentException>(() => round.SetBonus(bonus));
   }
 
   [Fact]
   public void CanSetBonusToZeroWithNoBid()
   {
     var round = new Round(5);
+    var roundId = round.Id;
 
-    var updatedRound = round.WithBonus(0);
+    var updatedRound = round.SetBonus(0);
 
-    Assert.NotNull(updatedRound);
-    Assert.Equal(0, updatedRound.Bonus);
-    Assert.Equal(round.Id, updatedRound.Id);
+    Assert.NotNull(round);
+    Assert.Equal(0, round.Bonus);
+    Assert.Equal(roundId, round.Id);
   }
 
   [Fact]
@@ -128,27 +133,28 @@ public class RoundTests
   {
     var round = new Round(5);
 
-    Assert.Throws<ArgumentException>(() => round.WithBonus(20));
+    Assert.Throws<ArgumentException>(() => round.SetBonus(20));
   }
 
   [Fact]
   public void NoBonusWhenTakenDoesNotMatchBid()
   {
-    var round = new Round(5).WithBid(3).WithTricksTaken(4);
+    var round = new Round(5).SetBid(3).SetTricksTaken(4);
 
-    Assert.Throws<ArgumentException>(() => round.WithBonus(20));
+    Assert.Throws<ArgumentException>(() => round.SetBonus(20));
   }
 
   [Fact]
   public void CanSetBonusToZeroWithNoTricksTaken()
   {
-    var round = new Round(5).WithBid(3); ;
+    var round = new Round(5).SetBid(3);
+    var roundId = round.Id;
 
-    var updatedRound = round.WithBonus(0);
+    round.SetBonus(0);
 
-    Assert.NotNull(updatedRound);
-    Assert.Equal(0, updatedRound.Bonus);
-    Assert.Equal(round.Id, updatedRound.Id);
+    Assert.NotNull(round);
+    Assert.Equal(0, round.Bonus);
+    Assert.Equal(roundId, round.Id);
   }
 
   [Theory]
@@ -160,8 +166,47 @@ public class RoundTests
   [InlineData(7, 7, 50, 190)]
   public void ScoreIsCorrect(int bid, int tricksTaken, int bonus, int expected)
   {
-    var round = new Round(9).WithBid(bid).WithTricksTaken(tricksTaken).WithBonus(bonus);
+    var round = new Round(9).SetBid(bid).SetTricksTaken(tricksTaken).SetBonus(bonus);
 
     Assert.Equal(expected, round.GetScore());
+  }
+
+  [Fact]
+  public void CanClearBid()
+  {
+    var round = new Round(5).SetBid(3);
+    var roundId = round.Id;
+    round.ClearBid();
+
+    Assert.NotNull(round);
+    Assert.Null(round.Bid);
+    Assert.Equal(5, round.MaxBid);
+    Assert.Equal(roundId, round.Id);
+  }
+
+  [Fact]
+  public void CanClearTricksTaken()
+  {
+    var round = new Round(5).SetBid(3).SetTricksTaken(2);
+    var updatedRound = round.ClearTricksTaken();
+
+    Assert.NotNull(updatedRound);
+    Assert.Null(updatedRound.TricksTaken);
+    Assert.Equal(3, updatedRound.Bid);
+    Assert.Equal(round.Id, updatedRound.Id);
+  }
+
+  [Fact]
+  public void CanClearBonus()
+  {
+    var round = new Round(5).SetBid(3).SetTricksTaken(3).SetBonus(20);
+    var roundId = round.Id;
+    round.ClearBonus();
+
+    Assert.NotNull(round);
+    Assert.Null(round.Bonus);
+    Assert.Equal(3, round.TricksTaken);
+    Assert.Equal(3, round.Bid);
+    Assert.Equal(roundId, round.Id);
   }
 }
