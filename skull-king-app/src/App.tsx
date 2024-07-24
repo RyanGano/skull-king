@@ -6,6 +6,7 @@ import {
   AddPlayerUri,
   CreateNewGameUri,
   EditPlayerUri,
+  GameMoveNextPhaseUri,
   GetGameUri,
   StartGameUri,
 } from "./service-paths";
@@ -52,13 +53,18 @@ const App = () => {
   // allows a player to return to a game if they happen
   // to refresh the page, or if their browser exits.
   useEffect(() => {
-    if (game?.id && me && !cookies.skull_king) {
-      setCookie("skull_king", { gameId: game.id, me: { ...me } });
+    if (game?.status == GameStatus.gameOver && cookies.skull_king) {
+      setCookie("skull_king", null);
       return;
     }
 
     if (game?.status == GameStatus.gameOver) {
-      setCookie("skull_king", null);
+      return;
+    }
+
+    if (game?.id && me && !cookies.skull_king) {
+      setCookie("skull_king", { gameId: game.id, me: { ...me } });
+      return;
     }
 
     if (cookies.skull_king && !game?.id) {
@@ -154,14 +160,14 @@ const App = () => {
       return;
     }
 
-    const result = await callGetRoute(StartGameUri(game.id, me.id));
+    const result = await callGetRoute(StartGameUri(game.id, me.id, game.hash));
 
     if (result.status !== 200) {
       console.log("Could not start game", result.status, result.statusText);
     } else {
       updateGame(game.id, currentHashRef.current ?? "");
     }
-  }, [game?.id, game?.playerRoundInfo, me?.id, updateGame]);
+  }, [game?.hash, game?.id, game?.playerRoundInfo, me?.id, updateGame]);
 
   const showOptionalPopup = useCallback(() => {
     return game && game.status !== GameStatus.gameOver
@@ -174,7 +180,27 @@ const App = () => {
   };
 
   const moveToPreviousGameStatus = () => {};
-  const moveToNextGameStatus = () => {};
+
+  const moveToNextGameStatus = useCallback(async () => {
+    if (!game || !me) {
+      console.log("No game or player");
+      return;
+    }
+
+    const result = await callGetRoute(
+      GameMoveNextPhaseUri(game.id, me.id, game.hash)
+    );
+
+    if (result.status !== 200) {
+      console.log(
+        "Could not move to next phase",
+        result.status,
+        result.statusText
+      );
+    } else {
+      updateGame(game.id, currentHashRef.current ?? "");
+    }
+  }, [game, me, updateGame]);
 
   return (
     <Stack gap={2}>

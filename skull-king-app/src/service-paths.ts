@@ -2,8 +2,9 @@ const BaseGameUriInternal = "BASE_URI/games";
 
 const CreateNewGameInternal = BaseGameUriInternal;
 const GetGameInternal = `${BaseGameUriInternal}/GAME_ID/?knownHash=KNOWN_HASH`;
-const StartGameInternal = `${BaseGameUriInternal}/GAME_ID/start?playerId=PLAYER_ID`;
+const StartGameInternal = `${BaseGameUriInternal}/GAME_ID/start?playerId=PLAYER_ID&knownHash=KNOWN_HASH`;
 const GetGamePlayerInternal = `${BaseGameUriInternal}/GAME_ID/players`;
+const GameMoveNextPhaseInternal = `${BaseGameUriInternal}/GAME_ID/movenext?playerId=PLAYER_ID&knownHash=KNOWN_HASH`;
 
 const CurrentBaseUri = import.meta.env.VITE_REACT_APP_BASE_SERVICE_URI;
 
@@ -33,10 +34,15 @@ export function GetGameUri(gameId: string, currentHash?: string) {
   ]);
 }
 
-export function StartGameUri(gameId: string, playerId: string) {
+export function StartGameUri(
+  gameId: string,
+  playerId: string,
+  currentHash: string
+) {
   return formatUriString(StartGameInternal, [
     { key: "GAME_ID", value: gameId },
     { key: "PLAYER_ID", value: playerId },
+    { key: "KNOWN_HASH", value: currentHash },
   ]);
 }
 
@@ -49,5 +55,17 @@ export function AddPlayerUri(gameId: string) {
 export function EditPlayerUri(gameId: string) {
   return formatUriString(GetGamePlayerInternal, [
     { key: "GAME_ID", value: gameId },
+  ]);
+}
+
+export function GameMoveNextPhaseUri(
+  gameId: string,
+  playerId: string,
+  currentHash: string
+) {
+  return formatUriString(GameMoveNextPhaseInternal, [
+    { key: "GAME_ID", value: gameId },
+    { key: "PLAYER_ID", value: playerId },
+    { key: "KNOWN_HASH", value: currentHash },
   ]);
 }
