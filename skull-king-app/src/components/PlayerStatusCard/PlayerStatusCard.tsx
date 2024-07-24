@@ -174,7 +174,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
             <p>
               {currentRound.maxBid !== 1 ? (
                 <span>{`Last Round: ${calculateRoundScore(
-                  currentRound
+                  playerRounds.rounds.slice(-2)[0]
                 )}`}</span>
               ) : (
                 <br />
@@ -183,7 +183,9 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
           )}
           {turnPhase === GameStatus.biddingClosed && (
             <p>
-              <span>{`Results: ${currentRound.tricksTaken} / ${currentRound.bonus}`}</span>
+              <span>{`Results: ${currentRound.tricksTaken ?? "..."} / ${
+                currentRound.bonus ?? "..."
+              }`}</span>
             </p>
           )}
 
@@ -206,6 +208,11 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
 };
 
 const calculateRoundScore = (round: Round): number => {
+  // If the round hasn't been scored yet, just return 0;
+  if (round.tricksTaken === null) {
+    return 0;
+  }
+
   if (round.bid === round.tricksTaken) {
     const newScore =
       round.bid === 0
