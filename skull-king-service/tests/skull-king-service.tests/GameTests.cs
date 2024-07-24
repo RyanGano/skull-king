@@ -117,6 +117,16 @@ public class GameTests
   }
 
   [Fact]
+  public void CannotStartGameTwice()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.StartGame();
+
+    Assert.Throws<InvalidOperationException>(() => game.StartGame());
+  }
+
+  [Fact]
   public void GameHashesAreNotEqual()
   {
     var player = new Player("Ryan");

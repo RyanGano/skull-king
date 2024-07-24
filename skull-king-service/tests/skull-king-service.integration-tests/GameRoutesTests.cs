@@ -232,6 +232,24 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     Assert.Equal(HttpStatusCode.PreconditionFailed, response.StatusCode);
   }
 
+  [Fact]
+  public async Task CannotStartGameTwice()
+  {
+    var createdGame = await CreateNewGame("Player 1");
+    var gameId = createdGame?.Id;
+
+    var newPlayer = new PlayerDto { Name = "Player 2" };
+    var playerContent = JsonContent.Create(newPlayer);
+    await _client.PutAsync($"/games/{gameId}/players", playerContent);
+    var game = GetGame(gameId!);
+
+    await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    game = GetGame(gameId!);
+
+    var response = await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+  }
+
   private async Task<GameDto?> CreateNewGame(string playerName)
   {
     var newGameDto = new NewGameDto { PlayerName = playerName };

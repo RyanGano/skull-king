@@ -53,6 +53,8 @@ public record Game
   {
     if (PlayerRoundInfo.Count < c_minPlayers)
       throw new InvalidOperationException("Cannot start game with less than 2 players");
+    if (Status != GameStatus.AcceptingPlayers)
+      throw new InvalidOperationException("Game has already started");
 
     Status = GameStatus.BiddingOpen;
     EditablePlayerRoundInfo.ForEach(x => x.AddRound());

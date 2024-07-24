@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
 public static class GameRoutes
@@ -131,7 +130,7 @@ public static class GameRoutes
 
         await httpContext.Response.WriteAsJsonAsync(game);
       }
-      catch (ArgumentException)
+      catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
       {
         httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
       }
