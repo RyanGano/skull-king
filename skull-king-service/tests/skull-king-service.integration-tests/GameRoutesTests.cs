@@ -250,18 +250,6 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
 
-  private async Task<GameDto?> CreateNewGame(string playerName)
-  {
-    var newGameDto = new NewGameDto { PlayerName = playerName };
-    var content = JsonContent.Create(newGameDto);
-    var response = await _client.PostAsync("/games", content);
-
-    var responseContent = await response.Content.ReadAsStringAsync();
-    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
-
-    return responseGame;
-  }
-
   [Fact]
   public async Task CanMoveGameToNextPhase()
   {
@@ -282,6 +270,53 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     game = GetGame(gameId!);
     Assert.Equal(GameStatus.BiddingClosed, game.Status);
     Assert.Equal(1, game.PlayerRoundInfo.Select(x => x.Rounds!.Count).Distinct().Single());
+  }
+
+  [Fact]
+  public async Task CanMoveGameToPreviousPhase()
+  {
+    var createdGame = await CreateNewGame("Player 1");
+    var gameId = createdGame?.Id;
+
+    var newPlayer = new PlayerDto { Name = "Player 2" };
+    var playerContent = JsonContent.Create(newPlayer);
+    await _client.PutAsync($"/games/{gameId}/players", playerContent);
+    var game = GetGame(gameId!);
+
+    await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    game = GetGame(gameId!);
+
+    // Set bids and update hash
+    game.PlayerRoundInfo[0].SetBid(0);
+    game.PlayerRoundInfo[1].SetBid(1);
+    _dbContext.Games.Update(game);
+    var hash = _dbContext.Hashes.Find(gameId);
+    hash!.Value = game.GetHashCode().ToString();
+    _dbContext.Hashes.Update(hash);
+    _dbContext.SaveChanges();
+    var currentHash = game.GetHashCode();
+
+    await _client.GetAsync($"/games/{gameId}/movenext?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    game = GetGame(gameId!);
+
+    var response = await _client.GetAsync($"/games/{gameId}/moveprevious?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    game = GetGame(gameId!);
+    Assert.Equal(GameStatus.BiddingOpen, game.Status);
+    Assert.Equal(currentHash, game.GetHashCode());
+  }
+
+  private async Task<GameDto?> CreateNewGame(string playerName)
+  {
+    var newGameDto = new NewGameDto { PlayerName = playerName };
+    var content = JsonContent.Create(newGameDto);
+    var response = await _client.PostAsync("/games", content);
+
+    var responseContent = await response.Content.ReadAsStringAsync();
+    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
+
+    return responseGame;
   }
 
   private Game GetGame(string gameId)

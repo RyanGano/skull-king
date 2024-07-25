@@ -7,6 +7,7 @@ import {
   CreateNewGameUri,
   EditPlayerUri,
   GameMoveNextPhaseUri,
+  GameMovePreviousPhaseUri,
   GetGameUri,
   StartGameUri,
 } from "./service-paths";
@@ -179,7 +180,26 @@ const App = () => {
     return showOptionalPopup();
   };
 
-  const moveToPreviousGameStatus = () => {};
+  const moveToPreviousGameStatus = useCallback(async () => {
+    if (!game || !me) {
+      console.log("No game or player");
+      return;
+    }
+
+    const result = await callGetRoute(
+      GameMovePreviousPhaseUri(game.id, me.id, game.hash)
+    );
+
+    if (result.status !== 200) {
+      console.log(
+        "Could not move to previous phase",
+        result.status,
+        result.statusText
+      );
+    } else {
+      updateGame(game.id, currentHashRef.current ?? "");
+    }
+  }, [game, me, updateGame]);
 
   const moveToNextGameStatus = useCallback(async () => {
     if (!game || !me) {

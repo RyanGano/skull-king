@@ -176,6 +176,39 @@ public static class GameRoutes
     })
     .WithName("MoveToNextPhase")
     .RequireCors(cors);
+
+    app.MapGet("/games/{id}/moveprevious", async (string id, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    {
+      var game = await GetFullGame(id, db);
+      if (game is null)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+      }
+
+      if (game.PlayerRoundInfo.First().Player!.Id != playerId)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return;
+      }
+
+      // Check the knownHash compared to current stored hash
+      // Do not allow updates if the user's hash doesn't match the current hash
+      var currentHash = db.Hashes.Find(id);
+      if (currentHash?.Value != knownHash)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
+        return;
+      }
+
+      // Move the game to the next phase
+      game.MoveToPreviousPhase();
+      
+      db.Games.Update(game);
+      await UpdateHashAndSaveAsync(db, game);
+    })
+    .WithName("MoveToPreviousPhase")
+    .RequireCors(cors);
   }
 
   private static async Task<Game?> GetFullGame(string id, SkullKingDbContext db)
