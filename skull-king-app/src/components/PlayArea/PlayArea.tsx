@@ -7,6 +7,9 @@ import { Game, GameStatus, Player } from "../../types/game";
 import { PlayerStatusCard } from "../PlayerStatusCard/PlayerStatusCard";
 
 import "./PlayArea.less";
+import { GameSetBidUri, GameSetScoreUri } from "../../service-paths";
+import { callGetRoute } from "../../utils/api-utils";
+import { useCallback } from "react";
 
 interface PlayAreaProps {
   game: Game;
@@ -17,6 +20,42 @@ interface PlayAreaProps {
 
 export const PlayArea = (props: PlayAreaProps) => {
   const { game, me, moveToNextGameStatus, moveToPreviousGameStatus } = props;
+
+  const changeBid = useCallback(
+    async (bid: number) => {
+      if (!game || !me) {
+        console.log("No game or player");
+        return;
+      }
+
+      const result = await callGetRoute(
+        GameSetBidUri(game.id, me.id, bid, game.hash)
+      );
+
+      if (result.status !== 200) {
+        console.log("Could not set bid", result.status, result.statusText);
+      }
+    },
+    [game, me]
+  );
+
+  const changeScore = useCallback(
+    async (tricksTaken: number, bonus: number) => {
+      if (!game || !me) {
+        console.log("No game or player");
+        return;
+      }
+
+      const result = await callGetRoute(
+        GameSetScoreUri(game.id, me.id, tricksTaken, bonus, game.hash)
+      );
+
+      if (result.status !== 200) {
+        console.log("Could not set score", result.status, result.statusText);
+      }
+    },
+    [game, me]
+  );
 
   const gameState =
     game?.status === GameStatus.gameOver
@@ -61,13 +100,14 @@ export const PlayArea = (props: PlayAreaProps) => {
               playerRounds={x}
               turnPhase={game.status}
               onBidChange={
-                x.player.id === me.id
-                  ? (newValue) => console.log("onBidChange", newValue)
+                x.player.id === me.id && game.status === GameStatus.biddingOpen
+                  ? (bid) => changeBid(bid)
                   : undefined
               }
               onScoreChange={
-                x.player.id === me.id
-                  ? (newValue) => console.log("onScoreChange", newValue)
+                x.player.id === me.id &&
+                game.status === GameStatus.biddingClosed
+                  ? (tricksTaken, bonus) => changeScore(tricksTaken, bonus)
                   : undefined
               }
               dealer={x.player.id === dealerId}

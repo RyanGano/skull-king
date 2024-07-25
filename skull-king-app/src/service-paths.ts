@@ -6,6 +6,8 @@ const StartGameInternal = `${BaseGameUriInternal}/GAME_ID/start?playerId=PLAYER_
 const GetGamePlayerInternal = `${BaseGameUriInternal}/GAME_ID/players`;
 const GameMoveNextPhaseInternal = `${BaseGameUriInternal}/GAME_ID/movenext?playerId=PLAYER_ID&knownHash=KNOWN_HASH`;
 const GameMovePreviousPhaseInternal = `${BaseGameUriInternal}/GAME_ID/moveprevious?playerId=PLAYER_ID&knownHash=KNOWN_HASH`;
+const GameSetBidInternal = `${BaseGameUriInternal}/GAME_ID/setbid?playerId=PLAYER_ID&bid=BID&knownHash=KNOWN_HASH`;
+const GameSetScoreInternal = `${BaseGameUriInternal}/GAME_ID/setscore?playerId=PLAYER_ID&trickstaken=TRICKS_TAKEN&bonus=BONUS&knownHash=KNOWN_HASH`;
 
 const CurrentBaseUri = import.meta.env.VITE_REACT_APP_BASE_SERVICE_URI;
 
@@ -79,6 +81,36 @@ export function GameMovePreviousPhaseUri(
   return formatUriString(GameMovePreviousPhaseInternal, [
     { key: "GAME_ID", value: gameId },
     { key: "PLAYER_ID", value: playerId },
+    { key: "KNOWN_HASH", value: currentHash },
+  ]);
+}
+
+export function GameSetBidUri(
+  gameId: string,
+  playerId: string,
+  bid: number,
+  currentHash: string
+) {
+  return formatUriString(GameSetBidInternal, [
+    { key: "GAME_ID", value: gameId },
+    { key: "PLAYER_ID", value: playerId },
+    { key: "BID", value: bid.toString() },
+    { key: "KNOWN_HASH", value: currentHash },
+  ]);
+}
+
+export function GameSetScoreUri(
+  gameId: string,
+  playerId: string,
+  tricksTaken: number,
+  bonus: number,
+  currentHash: string
+) {
+  return formatUriString(GameSetScoreInternal, [
+    { key: "GAME_ID", value: gameId },
+    { key: "PLAYER_ID", value: playerId },
+    { key: "TRICKS_TAKEN", value: tricksTaken.toString() },
+    { key: "BONUS", value: bonus.toString() },
     { key: "KNOWN_HASH", value: currentHash },
   ]);
 }

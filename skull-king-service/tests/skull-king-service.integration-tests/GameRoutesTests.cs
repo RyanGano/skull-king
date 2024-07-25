@@ -307,6 +307,54 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     Assert.Equal(currentHash, game.GetHashCode());
   }
 
+  [Fact]
+  public async Task CanUpdateBid()
+  {
+    var createdGame = await CreateNewGame("Player 1");
+    var gameId = createdGame?.Id;
+
+    var newPlayer = new PlayerDto { Name = "Player 2" };
+    var playerContent = JsonContent.Create(newPlayer);
+    await _client.PutAsync($"/games/{gameId}/players", playerContent);
+    var game = GetGame(gameId!);
+
+    await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    game = GetGame(gameId!);
+
+    var response = await _client.GetAsync($"/games/{gameId}/setbid?playerId={game.PlayerRoundInfo[1].Player!.Id}&bid=1&knownHash={game.GetHashCode()}");
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var updatedGame = GetGame(game.Id);
+    Assert.Null(updatedGame.PlayerRoundInfo[0].Rounds[^1].Bid);
+    Assert.Equal(1, updatedGame.PlayerRoundInfo[1].Rounds[^1].Bid);
+  }
+
+  [Fact]
+  public async Task CanUpdateScore()
+  {
+    var createdGame = await CreateNewGame("Player 1");
+    var gameId = createdGame?.Id;
+
+    var newPlayer = new PlayerDto { Name = "Player 2" };
+    var playerContent = JsonContent.Create(newPlayer);
+    await _client.PutAsync($"/games/{gameId}/players", playerContent);
+    var game = GetGame(gameId!);
+
+    await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    game = GetGame(gameId!);
+    await _client.GetAsync($"/games/{gameId}/movenext?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    game = GetGame(gameId!);
+
+    var response = await _client.GetAsync($"/games/{gameId}/setscore?playerId={game.PlayerRoundInfo[1].Player!.Id}&trickstaken=1&bonus=0&knownHash={game.GetHashCode()}");
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var updatedGame = GetGame(game.Id);
+    Assert.Null(updatedGame.PlayerRoundInfo[0].Rounds[^1].TricksTaken);
+    Assert.Null(updatedGame.PlayerRoundInfo[0].Rounds[^1].Bonus);
+    Assert.Equal(1, updatedGame.PlayerRoundInfo[1].Rounds[^1].TricksTaken);
+    Assert.Equal(0, updatedGame.PlayerRoundInfo[1].Rounds[^1].Bonus);
+  }
+
   private async Task<GameDto?> CreateNewGame(string playerName)
   {
     var newGameDto = new NewGameDto { PlayerName = playerName };

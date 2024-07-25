@@ -190,13 +190,13 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
           )}
 
           {/* Bid hasn't been entered by this player yet. */}
-          {turnPhase === GameStatus.biddingOpen && !currentRound.bid && (
-            <h5>{`Bid: ...`}</h5>
-          )}
+          {turnPhase === GameStatus.biddingOpen &&
+            currentRound.bid === null && <h5>{`Bid: ...`}</h5>}
           {/* Bid has been entered (only show if it's my bid). */}
-          {turnPhase === GameStatus.biddingOpen && !!currentRound.bid && (
-            <h5>{`Bid: ${isMe ? currentRound.bid ?? 0 : "?"}`}</h5>
-          )}
+          {turnPhase === GameStatus.biddingOpen &&
+            currentRound.bid !== null && (
+              <h5>{`Bid: ${isMe ? currentRound.bid ?? 0 : "?"}`}</h5>
+            )}
           {/* All bids are public and round is starting. */}
           {turnPhase === GameStatus.biddingClosed && (
             <h5>{`Bid: ${currentRound.bid ?? 0}`}</h5>

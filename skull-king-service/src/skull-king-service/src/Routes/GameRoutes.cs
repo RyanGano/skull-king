@@ -203,11 +203,81 @@ public static class GameRoutes
 
       // Move the game to the next phase
       game.MoveToPreviousPhase();
-      
+
       db.Games.Update(game);
       await UpdateHashAndSaveAsync(db, game);
     })
     .WithName("MoveToPreviousPhase")
+    .RequireCors(cors);
+
+    app.MapGet("/games/{id}/setbid", async (string id, int bid, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    {
+      var game = await GetFullGame(id, db);
+      if (game is null)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+      }
+
+      var playerRoundInfo = game.PlayerRoundInfo.SingleOrDefault(x => x.Player!.Id == playerId);
+
+      if (playerRoundInfo is null)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return;
+      }
+
+      // Check the knownHash compared to current stored hash
+      // Do not allow updates if the user's hash doesn't match the current hash
+      var currentHash = db.Hashes.Find(id);
+      if (currentHash?.Value != knownHash)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
+        return;
+      }
+
+      // Move the game to the next phase
+      playerRoundInfo.SetBid(bid);
+
+      db.Games.Update(game);
+      await UpdateHashAndSaveAsync(db, game);
+    })
+    .WithName("SetBid")
+    .RequireCors(cors);
+
+    app.MapGet("/games/{id}/setscore", async (string id, int tricksTaken, int bonus, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    {
+      var game = await GetFullGame(id, db);
+      if (game is null)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+      }
+
+      var playerRoundInfo = game.PlayerRoundInfo.SingleOrDefault(x => x.Player!.Id == playerId);
+
+      if (playerRoundInfo is null)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return;
+      }
+
+      // Check the knownHash compared to current stored hash
+      // Do not allow updates if the user's hash doesn't match the current hash
+      var currentHash = db.Hashes.Find(id);
+      if (currentHash?.Value != knownHash)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
+        return;
+      }
+
+      // Move the game to the next phase
+      playerRoundInfo.SetScore(tricksTaken, bonus);
+
+      db.Games.Update(game);
+      await UpdateHashAndSaveAsync(db, game);
+    })
+    .WithName("SetScore")
     .RequireCors(cors);
   }
 
