@@ -36,7 +36,7 @@ jobs:
         run: dotnet build .\skull-king-service\src\skull-king-service\skull-king-service.csproj --configuration Release
 
       - name: Integration tests
-        run: dotnet test .\skull-king-service\tests\skull-king-service.integration.tests\skull-king-service.integration.tests.csproj
+        run: dotnet test .\skull-king-service\tests\skull-king-service.integration-tests\skull-king-service.integration-tests.csproj
 
       - name: Unit Tests
         run: dotnet test .\skull-king-service\tests\skull-king-service.tests\skull-king-service.tests.csproj
