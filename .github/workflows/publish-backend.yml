@@ -21,7 +21,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build_api:
     runs-on: windows-latest
 
     steps:
