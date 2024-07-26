@@ -1,0 +1,5 @@
+[config]
+version = 2.0
+
+[build]
+node_version = "20.x"
