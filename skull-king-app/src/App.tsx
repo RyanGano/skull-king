@@ -16,6 +16,8 @@ import { PlayArea } from "./components/PlayArea";
 import { GameInfo } from "./components/GameInfo";
 import { GameSetup } from "./components/GameSetup";
 import { useCookies } from "react-cookie";
+import { SimpleModal } from "./common/simple-modal";
+import { XCircleFill } from "react-bootstrap-icons";
 
 const App = () => {
   const [game, setGame] = useState<Game | null>(null);
@@ -23,6 +25,7 @@ const App = () => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const currentHashRef = useRef<string | undefined>();
   const [cookies, setCookie] = useCookies(["skull_king"]);
+  const [showExitPopup, setShowExitPopup] = useState(false);
 
   useEffect(() => {
     currentHashRef.current = game?.hash;
@@ -222,33 +225,71 @@ const App = () => {
     }
   }, [game, me, updateGame]);
 
+  const exitGame = useCallback(() => {
+    // Clear the cookie and clear the game
+    // Stop listening for updates.
+    setCookie("skull_king", null);
+    setGame(null);
+    setMe(undefined);
+    clearInterval(timerRef.current!);
+    timerRef.current = null;
+    currentHashRef.current = undefined;
+    setShowExitPopup(false);
+  }, [setCookie]);
+
   return (
-    <Stack gap={2}>
-      <GameInfo
-        game={game}
-        me={me!}
-        editMyName={editPlayerName}
-        startGame={
-          game?.status === GameStatus.acceptingPlayers &&
-          (game.playerRoundInfo?.length ?? 0) > 1 &&
-          game?.playerRoundInfo?.[0].player.id === me?.id
-            ? startGame
-            : undefined
+    <div className="App">
+      <SimpleModal
+        title={"Exit Game"}
+        content={
+          <>
+            Are you sure you want to exit this game (you won't be able to get
+            back into it.)
+          </>
         }
+        defaultButtonContent={"Exit"}
+        alternateButtonContent={"Cancel"}
+        onAccept={exitGame}
+        onCancel={() => setShowExitPopup(false)}
+        show={showExitPopup}
+        centered={false}
+        fullScreen={false}
       />
-      <GameSetup
-        createGame={!game ? createGame : undefined}
-        joinGame={!game ? joinGame : undefined}
-      />
-      {game && game?.status !== GameStatus.acceptingPlayers && (
-        <PlayArea
+      <Stack gap={2}>
+        <GameInfo
           game={game}
           me={me!}
-          moveToNextGameStatus={moveToNextGameStatus}
-          moveToPreviousGameStatus={moveToPreviousGameStatus}
+          editMyName={editPlayerName}
+          startGame={
+            game?.status === GameStatus.acceptingPlayers &&
+            (game.playerRoundInfo?.length ?? 0) > 1 &&
+            game?.playerRoundInfo?.[0].player.id === me?.id
+              ? startGame
+              : undefined
+          }
+        />
+        <GameSetup
+          createGame={!game ? createGame : undefined}
+          joinGame={!game ? joinGame : undefined}
+        />
+        {game && game?.status !== GameStatus.acceptingPlayers && (
+          <PlayArea
+            game={game}
+            me={me!}
+            moveToNextGameStatus={moveToNextGameStatus}
+            moveToPreviousGameStatus={moveToPreviousGameStatus}
+          />
+        )}
+      </Stack>
+      {game && (
+        <XCircleFill
+          color={"red"}
+          size={36}
+          className={"exitGameButton"}
+          onClick={() => setShowExitPopup(true)}
         />
       )}
-    </Stack>
+    </div>
   );
 };
 
