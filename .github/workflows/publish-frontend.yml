@@ -27,13 +27,13 @@ jobs:
           submodules: true
           lfs: false
 
-      - name: Install dependencies
-        run: yarn install --prefer-offline
-        working-directory: ./skull-king-app
+      # - name: Install dependencies
+      #   run: yarn install --prefer-offline
+      #   working-directory: ./skull-king-app
 
-      - name: Build the project
-        run: yarn build
-        working-directory: ./skull-king-app
+      # - name: Build the project
+      #   run: yarn build
+      #   working-directory: ./skull-king-app
 
       - name: Build And Deploy
         id: builddeploy
