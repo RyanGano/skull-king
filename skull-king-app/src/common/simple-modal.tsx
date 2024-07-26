@@ -11,6 +11,7 @@ export interface SimpleModalProps {
   allowAccept?: boolean;
   show: boolean;
   centered?: boolean;
+  fullScreen?: boolean;
 }
 
 export const SimpleModal = (props: SimpleModalProps) => {
@@ -24,13 +25,14 @@ export const SimpleModal = (props: SimpleModalProps) => {
     allowAccept,
     show,
     centered,
+    fullScreen,
   } = props;
   return (
     <Modal
       show={show}
       onHide={onCancel}
       centered={centered ?? true}
-      fullscreen="sm-down"
+      fullscreen={fullScreen ?? true ? "sm-down" : ""}
     >
       <Modal.Header closeButton>
         <Modal.Title>{title}</Modal.Title>
