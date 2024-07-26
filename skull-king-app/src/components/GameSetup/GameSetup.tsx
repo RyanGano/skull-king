@@ -89,6 +89,8 @@ export const GameSetup = (props: GameSetupProps) => {
           onCancel={() => setShowCreateGameUI(false)}
           allowAccept={!!playerName}
           show={true}
+          centered={false}
+          fullScreen={false}
         />
       )}
       {showJoinGameUI && (
@@ -103,6 +105,8 @@ export const GameSetup = (props: GameSetupProps) => {
           onCancel={() => setShowJoinGameUI(false)}
           allowAccept={!!playerName && gameId?.length === 4}
           show={true}
+          centered={false}
+          fullScreen={false}
         />
       )}
       {!showCreateGameUI && !showJoinGameUI && createGame && (
