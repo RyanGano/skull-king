@@ -17,7 +17,6 @@ import { GameInfo } from "./components/GameInfo";
 import { GameSetup } from "./components/GameSetup";
 import { useCookies } from "react-cookie";
 import { SimpleModal } from "./common/simple-modal";
-import { XCircleFill } from "react-bootstrap-icons";
 
 const App = () => {
   const [game, setGame] = useState<Game | null>(null);
@@ -280,12 +279,18 @@ const App = () => {
             moveToPreviousGameStatus={moveToPreviousGameStatus}
           />
         )}
+        {!game && (
+          <img
+            src="/images/logo.png"
+            alt="Get ready to battle yer priate friends!"
+          />
+        )}
       </Stack>
       {game && (
-        <XCircleFill
-          color={"red"}
-          size={36}
+        <img
           className={"exitGameButton"}
+          src="/images/skeleton.png"
+          alt="Abandon yer mates."
           onClick={() => setShowExitPopup(true)}
         />
       )}
