@@ -57,7 +57,7 @@ public record Game
       throw new InvalidOperationException("Game has already started");
 
     Status = GameStatus.BiddingOpen;
-    EditablePlayerRoundInfo.ForEach(x => x.AddRound());
+    EditablePlayerRoundInfo.ForEach(x => x.AddRound(PlayerRoundInfo.Count));
   }
 
   public override int GetHashCode()
@@ -95,7 +95,7 @@ public record Game
 
       // Now add a new round to each player
       foreach (var playerRoundInfo in PlayerRoundInfo)
-        playerRoundInfo.AddRound();
+        playerRoundInfo.AddRound(PlayerRoundInfo.Count);
 
       Status = GameStatus.BiddingOpen;
     }

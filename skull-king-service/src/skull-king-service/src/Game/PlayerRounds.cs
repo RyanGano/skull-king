@@ -4,12 +4,12 @@ public record PlayerRounds
   public required Player? Player { get; init; }
   public IReadOnlyList<Round> Rounds => EditablePlayerRounds;
 
-  public void AddRound()
+  public void AddRound(int playerCount)
   {
     if (Rounds!.Count == 10)
       throw new InvalidOperationException("Cannot have more than 10 rounds");
 
-    EditablePlayerRounds!.Add(new Round(Rounds.Count + 1));
+    EditablePlayerRounds!.Add(new Round(int.Min(Rounds.Count + 1, playerCount == 8 ? 8 : 10)));
   }
 
   public void RemoveLastRound()

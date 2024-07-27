@@ -7,11 +7,31 @@ public class PlayerRoundsTests
   {
     var player = new Player("Ryan");
     var playerRounds = PlayerRounds.Create(player);
-    playerRounds.AddRound();
+    playerRounds.AddRound(2);
 
     Assert.NotNull(playerRounds);
     Assert.Equal(player, playerRounds.Player);
     Assert.Equal(1, playerRounds.Rounds?.Single().MaxBid);
+  }
+
+  [Theory]
+  [InlineData(2, true)]
+  [InlineData(3, true)]
+  [InlineData(4, true)]
+  [InlineData(5, true)]
+  [InlineData(6, true)]
+  [InlineData(7, true)]
+  [InlineData(8, false)]
+  public void MaxBidMatchesPlayerCountRequirements(int numberOfPlayers, bool expectFullDeal)
+  {
+    int[] expectedMaxBids = expectFullDeal ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : [1, 2, 3, 4, 5, 6, 7, 8, 8, 8];
+    var player = new Player("Ryan");
+    var playerRounds = PlayerRounds.Create(player);
+
+    for (int i = 0; i < 10; i++)
+      playerRounds.AddRound(numberOfPlayers);
+
+    Assert.Equivalent(expectedMaxBids, playerRounds.Rounds?.Select(r => r.MaxBid));
   }
 
   [Fact]
@@ -19,7 +39,7 @@ public class PlayerRoundsTests
   {
     var player = new Player("Ryan");
     var playerRounds = PlayerRounds.Create(player);
-    playerRounds.AddRound();
+    playerRounds.AddRound(2);
 
     playerRounds.SetBid(1);
 
@@ -31,7 +51,7 @@ public class PlayerRoundsTests
   {
     var player = new Player("Ryan");
     var playerRounds = PlayerRounds.Create(player);
-    playerRounds.AddRound();
+    playerRounds.AddRound(2);
 
     playerRounds.ClearBid();
 
@@ -43,7 +63,7 @@ public class PlayerRoundsTests
   {
     var player = new Player("Ryan");
     var playerRounds = PlayerRounds.Create(player);
-    playerRounds.AddRound();
+    playerRounds.AddRound(2);
 
     playerRounds.SetBid(1);
     playerRounds.SetScore(1, 20);
@@ -57,7 +77,7 @@ public class PlayerRoundsTests
   {
     var player = new Player("Ryan");
     var playerRounds = PlayerRounds.Create(player);
-    playerRounds.AddRound();
+    playerRounds.AddRound(2);
 
     playerRounds.SetBid(1);
     playerRounds.SetScore(1, 20);
@@ -72,11 +92,11 @@ public class PlayerRoundsTests
   {
     var player = new Player("Ryan");
     var playerRounds = PlayerRounds.Create(player);
-    playerRounds.AddRound();
+    playerRounds.AddRound(2);
 
     playerRounds.SetBid(1);
     playerRounds.SetScore(1, 10);
-    playerRounds.AddRound();
+    playerRounds.AddRound(2);
     playerRounds.SetBid(2);
     playerRounds.SetScore(1, 0);
 
@@ -93,7 +113,7 @@ public class PlayerRoundsTests
   {
     var player = new Player("Ryan");
     var playerRounds = PlayerRounds.Create(player);
-    playerRounds.AddRound();
+    playerRounds.AddRound(2);
 
     playerRounds.SetBid(1);
     playerRounds.SetScore(1, 10);
