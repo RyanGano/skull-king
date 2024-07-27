@@ -279,7 +279,7 @@ const App = () => {
             moveToPreviousGameStatus={moveToPreviousGameStatus}
           />
         )}
-        {!game && (
+        {game && game.status === GameStatus.acceptingPlayers && (
           <img
             src="/images/logo.png"
             alt="Get ready to battle yer priate friends!"

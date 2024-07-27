@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { SimpleModal } from "../../common/simple-modal";
-import { Button, Stack } from "react-bootstrap";
+import { Stack } from "react-bootstrap";
 import { TextInputArea } from "../../common/input-area/text-input-area";
+
+import "./GameSetup.less";
 
 interface GameSetupProps {
   createGame?: (playerName: string) => void;
@@ -109,11 +111,30 @@ export const GameSetup = (props: GameSetupProps) => {
           fullScreen={false}
         />
       )}
-      {!showCreateGameUI && !showJoinGameUI && createGame && (
-        <Button onClick={() => setShowCreateGameUI(true)}>Create Game</Button>
-      )}
-      {!showCreateGameUI && !showJoinGameUI && joinGame && (
-        <Button onClick={() => setShowJoinGameUI(true)}>Join Game</Button>
+      {createGame && joinGame && (
+        <div className="gameSetupContainer">
+          <div className="imageContainer">
+            <img
+              src="/images/banner.png"
+              alt="Start or join a battle!"
+              className="bannerImage"
+            />
+            <div className="buttonsContainer">
+              {
+                <div
+                  className="gameButton"
+                  onClick={() => setShowCreateGameUI(true)}
+                ></div>
+              }
+              {
+                <div
+                  className="gameButton"
+                  onClick={() => setShowJoinGameUI(true)}
+                ></div>
+              }
+            </div>
+          </div>
+        </div>
       )}
     </Stack>
   );
