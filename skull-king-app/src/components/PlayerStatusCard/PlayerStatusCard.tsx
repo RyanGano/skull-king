@@ -42,18 +42,24 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
       children.push(
         <div
           key={i}
-          className="numberDisplayContainer"
-          onClick={
-            onBidChange
-              ? () => {
-                  currentRound.bid = i;
-                  setShowBidUI(false);
-                  onBidChange(i);
-                }
-              : undefined
-          }
+          className={classNames("numberDisplayBackground", {
+            ["selected"]: currentRound.bid === i,
+          })}
         >
-          {i}
+          <div
+            className="numberDisplayContainer"
+            onClick={
+              onBidChange
+                ? () => {
+                    currentRound.bid = i;
+                    setShowBidUI(false);
+                    onBidChange(i);
+                  }
+                : undefined
+            }
+          >
+            {i}
+          </div>
         </div>
       );
     }
@@ -72,10 +78,16 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
           }
         />
         <div
-          style={{ "--max-width": "75px" } as React.CSSProperties}
-          className="numberDisplayContainer"
+          className={classNames("numberDisplayBackground", "disabled", {
+            ["selected"]: currentBonus > 0,
+          })}
         >
-          {currentBonus}
+          <div
+            style={{ "--width": "75px" } as React.CSSProperties}
+            className="numberDisplayContainer"
+          >
+            {currentBonus}
+          </div>
         </div>
         <PlusSquareFill
           className="bonusChangeButton"
@@ -96,18 +108,12 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
       tricksTaken.push(
         <div
           key={i}
-          style={
-            {
-              "--background-color":
-                currentTricksTaken === i
-                  ? "var(--defaultGreenColor)"
-                  : "var(--defaultBlueColor)",
-            } as React.CSSProperties
-          }
-          className="numberDisplayContainer"
+          className={classNames("numberDisplayBackground", {
+            ["selected"]: currentTricksTaken === i,
+          })}
           onClick={() => setCurrentTricksTaken(i)}
         >
-          {i}
+          <div className="numberDisplayContainer">{i}</div>
         </div>
       );
     }
