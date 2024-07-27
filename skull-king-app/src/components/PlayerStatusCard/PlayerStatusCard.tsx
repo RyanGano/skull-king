@@ -153,55 +153,62 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
         show={showScoreUI}
       />
       <div
-        className={classNames("playerStatusContainer", {
+        className={classNames("playerStatusBackground", {
           ["disabled"]: !isMe,
           ["dealer"]: dealer,
         })}
-        onClick={() =>
-          onBidChange
-            ? setShowBidUI(true)
-            : onScoreChange
-            ? setShowScoreUI(true)
-            : undefined
-        }
       >
-        <Stack>
-          <h5>{playerRounds.player.name}</h5>
-          <span className="scoreText">{`Score: ${playerRounds.rounds
-            .map((x) => calculateRoundScore(x))
-            .reduce((a, b) => a + b, 0)}`}</span>
-          {turnPhase === GameStatus.biddingOpen && (
-            <p>
-              {currentRound.maxBid !== 1 ? (
-                <span>{`Last Round: ${calculateRoundScore(
-                  playerRounds.rounds.slice(-2)[0]
-                )}`}</span>
-              ) : (
-                <br />
-              )}
-            </p>
-          )}
-          {turnPhase === GameStatus.biddingClosed && (
-            <p>
-              <span>{`Results: ${currentRound.tricksTaken ?? "..."} / ${
-                currentRound.bonus ?? "..."
-              }`}</span>
-            </p>
-          )}
-
-          {/* Bid hasn't been entered by this player yet. */}
-          {turnPhase === GameStatus.biddingOpen &&
-            currentRound.bid === null && <h5>{`Bid: ...`}</h5>}
-          {/* Bid has been entered (only show if it's my bid). */}
-          {turnPhase === GameStatus.biddingOpen &&
-            currentRound.bid !== null && (
-              <h5>{`Bid: ${isMe ? currentRound.bid ?? 0 : "?"}`}</h5>
+        <div
+          className={classNames("playerStatusContainer", {
+            ["disabled"]: !isMe,
+            ["dealer"]: dealer,
+          })}
+          onClick={() =>
+            onBidChange
+              ? setShowBidUI(true)
+              : onScoreChange
+              ? setShowScoreUI(true)
+              : undefined
+          }
+        >
+          <Stack>
+            <h5>{playerRounds.player.name}</h5>
+            <span className="scoreText">{`Score: ${playerRounds.rounds
+              .map((x) => calculateRoundScore(x))
+              .reduce((a, b) => a + b, 0)}`}</span>
+            {turnPhase === GameStatus.biddingOpen && (
+              <p>
+                {currentRound.maxBid !== 1 ? (
+                  <span>{`Last Round: ${calculateRoundScore(
+                    playerRounds.rounds.slice(-2)[0]
+                  )}`}</span>
+                ) : (
+                  <br />
+                )}
+              </p>
             )}
-          {/* All bids are public and round is starting. */}
-          {turnPhase === GameStatus.biddingClosed && (
-            <h5>{`Bid: ${currentRound.bid ?? 0}`}</h5>
-          )}
-        </Stack>
+            {turnPhase === GameStatus.biddingClosed && (
+              <p>
+                <span>{`Results: ${currentRound.tricksTaken ?? "..."} / ${
+                  currentRound.bonus ?? "..."
+                }`}</span>
+              </p>
+            )}
+
+            {/* Bid hasn't been entered by this player yet. */}
+            {turnPhase === GameStatus.biddingOpen &&
+              currentRound.bid === null && <h5>{`Bid: ...`}</h5>}
+            {/* Bid has been entered (only show if it's my bid). */}
+            {turnPhase === GameStatus.biddingOpen &&
+              currentRound.bid !== null && (
+                <h5>{`Bid: ${isMe ? currentRound.bid ?? 0 : "?"}`}</h5>
+              )}
+            {/* All bids are public and round is starting. */}
+            {turnPhase === GameStatus.biddingClosed && (
+              <h5>{`Bid: ${currentRound.bid ?? 0}`}</h5>
+            )}
+          </Stack>
+        </div>
       </div>
     </>
   );
