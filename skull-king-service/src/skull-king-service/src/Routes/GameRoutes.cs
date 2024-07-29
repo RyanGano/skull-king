@@ -293,7 +293,7 @@ public static class GameRoutes
       try
       {
         // Set the player's score
-        playerRoundInfo.SetScore(tricksTaken, bonus); db.Rounds.AddRange(game.PlayerRoundInfo.Select(x => x.Rounds!.Last()));
+        playerRoundInfo.SetScore(tricksTaken, bonus);
         db.Games.Update(game);
         await UpdateHashAndSaveAsync(db, game);
       }
