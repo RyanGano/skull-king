@@ -181,16 +181,6 @@ const App = () => {
     }
   }, [game?.hash, game?.id, game?.playerRoundInfo, me?.id, updateGame]);
 
-  const showOptionalPopup = useCallback(() => {
-    return game && game.status !== GameStatus.gameOver
-      ? "Do you really want to stop playing?"
-      : null;
-  }, [game]);
-
-  window.onbeforeunload = function () {
-    return showOptionalPopup();
-  };
-
   const moveToPreviousGameStatus = useCallback(
     async (hash?: string) => {
       if (!game || !me) {
