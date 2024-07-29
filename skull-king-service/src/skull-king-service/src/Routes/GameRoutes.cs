@@ -162,17 +162,22 @@ public static class GameRoutes
         return;
       }
 
-      // Move the game to the next phase
-      game.MoveToNextPhase();
+      try
+      {
+        // Move the game to the next phase
+        game.MoveToNextPhase();
 
-      // Store the new data in the database as needed
-      if (game.Status == GameStatus.BiddingOpen)
-        db.Rounds.AddRange(game.PlayerRoundInfo.Select(x => x.Rounds!.Last()));
-      // else
-      //  db.Rounds.UpdateRange(game.PlayerRoundInfo.Select(x => x.Rounds!.Last()));
+        // Store the new data in the database as needed
+        if (game.Status == GameStatus.BiddingOpen)
+          db.Rounds.AddRange(game.PlayerRoundInfo.Select(x => x.Rounds!.Last()));
 
-      db.Games.Update(game);
-      await UpdateHashAndSaveAsync(db, game);
+        db.Games.Update(game);
+        await UpdateHashAndSaveAsync(db, game);
+      }
+      catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+      }
     })
     .WithName("MoveToNextPhase")
     .RequireCors(cors);
@@ -201,11 +206,18 @@ public static class GameRoutes
         return;
       }
 
-      // Move the game to the next phase
-      game.MoveToPreviousPhase();
+      try
+      {
+        // Move the game to the next phase
+        game.MoveToPreviousPhase();
 
-      db.Games.Update(game);
-      await UpdateHashAndSaveAsync(db, game);
+        db.Games.Update(game);
+        await UpdateHashAndSaveAsync(db, game);
+      }
+      catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+      }
     })
     .WithName("MoveToPreviousPhase")
     .RequireCors(cors);
@@ -236,11 +248,18 @@ public static class GameRoutes
         return;
       }
 
-      // Move the game to the next phase
-      playerRoundInfo.SetBid(bid);
+      try
+      {
+        // Move the game to the next phase
+        playerRoundInfo.SetBid(bid);
 
-      db.Games.Update(game);
-      await UpdateHashAndSaveAsync(db, game);
+        db.Games.Update(game);
+        await UpdateHashAndSaveAsync(db, game);
+      }
+      catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+      }
     })
     .WithName("SetBid")
     .RequireCors(cors);
@@ -271,11 +290,17 @@ public static class GameRoutes
         return;
       }
 
-      // Move the game to the next phase
-      playerRoundInfo.SetScore(tricksTaken, bonus);
-
-      db.Games.Update(game);
-      await UpdateHashAndSaveAsync(db, game);
+      try
+      {
+        // Set the player's score
+        playerRoundInfo.SetScore(tricksTaken, bonus); db.Rounds.AddRange(game.PlayerRoundInfo.Select(x => x.Rounds!.Last()));
+        db.Games.Update(game);
+        await UpdateHashAndSaveAsync(db, game);
+      }
+      catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+      }
     })
     .WithName("SetScore")
     .RequireCors(cors);
