@@ -67,6 +67,11 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
   };
 
   const getBonusUI = () => {
+    const currentRound = playerRounds.rounds[playerRounds.rounds.length - 1];
+    const allowBonus =
+      currentRound?.bid === currentTricksTaken ||
+      currentRound?.bid === currentRound.tricksTaken;
+
     return (
       <div className="bonusInputContainer">
         <DashSquareFill
@@ -90,8 +95,12 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
           </div>
         </div>
         <PlusSquareFill
-          className="bonusChangeButton"
-          onClick={() => setCurrentBonus(currentBonus + 10)}
+          className={classNames("bonusChangeButton", {
+            ["disabled"]: !allowBonus,
+          })}
+          onClick={() =>
+            allowBonus ? setCurrentBonus(currentBonus + 10) : undefined
+          }
         />
       </div>
     );
@@ -111,7 +120,12 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
           className={classNames("numberDisplayBackground", {
             ["selected"]: currentTricksTaken === i,
           })}
-          onClick={() => setCurrentTricksTaken(i)}
+          onClick={() => {
+            setCurrentTricksTaken(i);
+            if (i !== currentRound.bid) {
+              setCurrentBonus(0);
+            }
+          }}
         >
           <div className="numberDisplayContainer">{i}</div>
         </div>

@@ -25,6 +25,7 @@ const App = () => {
   const currentHashRef = useRef<string | undefined>();
   const [cookies, setCookie] = useCookies(["skull_king"]);
   const [showExitPopup, setShowExitPopup] = useState(false);
+  const [gameChanging, setChangingGame] = useState(false);
 
   useEffect(() => {
     currentHashRef.current = game?.hash;
@@ -34,6 +35,14 @@ const App = () => {
     const currentGame = await callGetRoute(GetGameUri(id, currentHash));
     if (currentGame.status !== 304) {
       setGame(currentGame.data);
+    }
+  }, []);
+
+  const getCurrentHash = useCallback(async (id: string) => {
+    const currentGame = await callGetRoute(GetGameUri(id));
+    if (currentGame.status !== 304) {
+      setGame(currentGame.data);
+      return currentGame.data.hash;
     }
   }, []);
 
@@ -182,47 +191,63 @@ const App = () => {
     return showOptionalPopup();
   };
 
-  const moveToPreviousGameStatus = useCallback(async () => {
-    if (!game || !me) {
-      console.log("No game or player");
-      return;
-    }
+  const moveToPreviousGameStatus = useCallback(
+    async (hash?: string) => {
+      if (!game || !me) {
+        console.log("No game or player");
+        return;
+      }
 
-    const result = await callGetRoute(
-      GameMovePreviousPhaseUri(game.id, me.id, game.hash)
-    );
-
-    if (result.status !== 200) {
-      console.log(
-        "Could not move to previous phase",
-        result.status,
-        result.statusText
+      setChangingGame(true);
+      // Attempt to update the game status
+      const result = await callGetRoute(
+        GameMovePreviousPhaseUri(game.id, me.id, hash ?? game.hash)
       );
-    } else {
-      updateGame(game.id, currentHashRef.current ?? "");
-    }
-  }, [game, me, updateGame]);
 
-  const moveToNextGameStatus = useCallback(async () => {
-    if (!game || !me) {
-      console.log("No game or player");
-      return;
-    }
+      if (result.status !== 200) {
+        console.log("Could not move to previous phase");
+        if (result.status === 409) {
+          console.log("Updating data and trying again");
+          const hash = await getCurrentHash(game.id);
+          moveToPreviousGameStatus(hash);
+        }
+      } else {
+        await updateGame(game.id, currentHashRef.current ?? "");
+        setChangingGame(false);
+      }
+    },
+    [game, getCurrentHash, me, updateGame]
+  );
 
-    const result = await callGetRoute(
-      GameMoveNextPhaseUri(game.id, me.id, game.hash)
-    );
+  const moveToNextGameStatus = useCallback(
+    async (hash?: string) => {
+      if (!game || !me) {
+        console.log("No game or player");
+        return;
+      }
 
-    if (result.status !== 200) {
-      console.log(
-        "Could not move to next phase",
-        result.status,
-        result.statusText
+      setChangingGame(true);
+      // Attempt to update the game status
+      const result = await callGetRoute(
+        GameMoveNextPhaseUri(game.id, me.id, hash ?? game.hash)
       );
-    } else {
-      updateGame(game.id, currentHashRef.current ?? "");
-    }
-  }, [game, me, updateGame]);
+
+      if (result.status !== 200) {
+        console.log("Could not move to next phase");
+        if (result.status === 409) {
+          console.log("Updating data and trying again");
+          setTimeout(async () => {
+            const hash = await getCurrentHash(game.id);
+            moveToNextGameStatus(hash);
+          }, 500); // 500 milliseconds delay
+        }
+      } else {
+        updateGame(game.id, currentHashRef.current ?? "");
+        setChangingGame(false);
+      }
+    },
+    [game, getCurrentHash, me, updateGame]
+  );
 
   const exitGame = useCallback(() => {
     // Clear the cookie and clear the game
@@ -277,6 +302,8 @@ const App = () => {
             me={me!}
             moveToNextGameStatus={moveToNextGameStatus}
             moveToPreviousGameStatus={moveToPreviousGameStatus}
+            gameChanging={gameChanging}
+            getCurrentHash={() => getCurrentHash(game.id)}
           />
         )}
         {game && game.status === GameStatus.acceptingPlayers && (

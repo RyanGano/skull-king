@@ -9,49 +9,96 @@ import { PlayerStatusCard } from "../PlayerStatusCard/PlayerStatusCard";
 import "./PlayArea.less";
 import { GameSetBidUri, GameSetScoreUri } from "../../service-paths";
 import { callGetRoute } from "../../utils/api-utils";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Spinner } from "react-bootstrap";
 
 interface PlayAreaProps {
   game: Game;
   me: Player;
   moveToNextGameStatus: () => void;
   moveToPreviousGameStatus: () => void;
+  gameChanging: boolean;
+  getCurrentHash: () => Promise<string>;
 }
 
 export const PlayArea = (props: PlayAreaProps) => {
-  const { game, me, moveToNextGameStatus, moveToPreviousGameStatus } = props;
+  const {
+    game,
+    me,
+    moveToNextGameStatus,
+    moveToPreviousGameStatus,
+    gameChanging,
+    getCurrentHash,
+  } = props;
+  const [changingGame, setChangingGame] = useState(false);
+  const [showOverlay, setShowOverlay] = useState(false);
+
+  useEffect(() => {
+    if (gameChanging || changingGame) {
+      const timer = setTimeout(() => setShowOverlay(true), 500);
+      return () => clearTimeout(timer);
+    } else {
+      setShowOverlay(false);
+    }
+  }, [changingGame, gameChanging]);
 
   const changeBid = useCallback(
-    async (bid: number) => {
+    async (bid: number, hash?: string) => {
       if (!game || !me) {
         console.log("No game or player");
         return;
       }
 
+      setChangingGame(true);
+      // Attempt to update the bid
       const result = await callGetRoute(
-        GameSetBidUri(game.id, me.id, bid, game.hash)
+        GameSetBidUri(game.id, me.id, bid, hash ?? game.hash)
       );
 
       if (result.status !== 200) {
-        console.log("Could not set bid", result.status, result.statusText);
+        console.log("Could not set bid");
+
+        if (result.status === 409) {
+          setTimeout(async () => {
+            const hash = await getCurrentHash();
+            changeBid(bid, hash);
+          }, 1000);
+        }
+      }
+
+      if (result.status !== 409) {
+        setChangingGame(false);
       }
     },
-    [game, me]
+    [game, getCurrentHash, me]
   );
 
   const changeScore = useCallback(
-    async (tricksTaken: number, bonus: number) => {
+    async (tricksTaken: number, bonus: number, hash?: string) => {
       if (!game || !me) {
         console.log("No game or player");
         return;
       }
 
+      setChangingGame(true);
+      // Attempt to update the game score
       const result = await callGetRoute(
-        GameSetScoreUri(game.id, me.id, tricksTaken, bonus, game.hash)
+        GameSetScoreUri(game.id, me.id, tricksTaken, bonus, hash ?? game.hash)
       );
 
       if (result.status !== 200) {
-        console.log("Could not set score", result.status, result.statusText);
+        console.log("Could not set score");
+
+        if (result.status === 409) {
+          setTimeout(async () => {
+            const hash = await getCurrentHash();
+            changeScore(tricksTaken, bonus, hash);
+          }, 1000);
+        }
+      }
+
+      if (result.status !== 409) {
+        setChangingGame(false);
       }
     },
     [game, me]
@@ -92,6 +139,11 @@ export const PlayArea = (props: PlayAreaProps) => {
 
   return (
     <>
+      {showOverlay && (
+        <div className={`overlay`}>
+          <Spinner animation="border" role="status"></Spinner>
+        </div>
+      )}
       <div className="playAreaContainer">
         {playerRounds.map((x, index) => (
           <div key={index} className="playerStatusCardContainer">
