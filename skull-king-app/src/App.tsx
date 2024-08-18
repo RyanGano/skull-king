@@ -9,6 +9,7 @@ import {
   GameMoveNextPhaseUri,
   GameMovePreviousPhaseUri,
   GetGameUri,
+  GetWarmupUri,
   StartGameUri,
 } from "./service-paths";
 import { Game, GameStatus, Player } from "./types/game";
@@ -26,6 +27,23 @@ const App = () => {
   const [cookies, setCookie] = useCookies(["skull_king"]);
   const [showExitPopup, setShowExitPopup] = useState(false);
   const [gameChanging, setChangingGame] = useState(false);
+  const [hasWarmedUp, setHasWarmedUp] = useState(false);
+
+  useEffect(() => {
+    if (hasWarmedUp) {
+      return;
+    }
+
+    const warmUp = async () => {
+      const result = await callGetRoute(GetWarmupUri());
+      if (result.status === 200) {
+        setHasWarmedUp(true);
+        console.log("Warmed up.");
+      }
+    };
+
+    warmUp();
+  }, [hasWarmedUp]);
 
   useEffect(() => {
     currentHashRef.current = game?.hash;

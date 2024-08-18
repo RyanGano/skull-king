@@ -1,4 +1,5 @@
-const BaseGameUriInternal = "BASE_URI/games";
+const BaseAppUriInternal = "BASE_URI/";
+const BaseGameUriInternal = `${BaseAppUriInternal}games`;
 
 const CreateNewGameInternal = BaseGameUriInternal;
 const GetGameInternal = `${BaseGameUriInternal}/GAME_ID/?knownHash=KNOWN_HASH`;
@@ -28,6 +29,10 @@ function getUriString(input: string) {
 
 export function CreateNewGameUri() {
   return getUriString(CreateNewGameInternal);
+}
+
+export function GetWarmupUri() {
+  return getUriString(BaseAppUriInternal);
 }
 
 export function GetGameUri(gameId: string, currentHash?: string) {
