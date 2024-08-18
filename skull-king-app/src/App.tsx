@@ -74,7 +74,7 @@ const App = () => {
 
       timerRef.current = setInterval(() => {
         updateGame(id, currentHashRef.current ?? "");
-      }, 2500);
+      }, 1000);
     },
     [updateGame]
   );
