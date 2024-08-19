@@ -138,6 +138,47 @@ public static class GameRoutes
     .WithName("StartGame")
     .RequireCors(cors);
 
+
+    app.MapPut("/games/{id}/players/reorder", async (string id, PlayerOrderDto playerOrderDto, HttpContext httpContext, SkullKingDbContext db) =>
+    {
+      // Check the knownHash compared to current stored hash
+      // Do not allow updates if the user's hash doesn't match the current hash
+      var currentHash = db.Hashes.Find(id);
+      if (currentHash?.Value != playerOrderDto.KnownHash)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status412PreconditionFailed;
+        return;
+      }
+
+      var game = await GetFullGame(id, db);
+      if (game is null)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+      }
+
+      if (game.PlayerRoundInfo.First().Player!.Id != playerOrderDto.PlayerId)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return;
+      }
+
+      try
+      {
+        game.SetPlayerOrder(playerOrderDto.PlayerOrder);
+        db.Games.Update(game);
+        await UpdateHashAndSaveAsync(db, game);
+
+        var gameAfterUpdate = await GetFullGame(id, db);
+      }
+      catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+      }
+    })
+    .WithName("ReorderPlayers")
+    .RequireCors(cors);
+
     app.MapGet("/games/{id}/movenext", async (string id, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
     {
       var game = await GetFullGame(id, db);

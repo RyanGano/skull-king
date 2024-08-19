@@ -4,7 +4,11 @@ public record Game
 {
   public required string Id { get; init; }
   public GameStatus Status { get; private set; }
-  public IReadOnlyList<PlayerRounds> PlayerRoundInfo => EditablePlayerRoundInfo;
+  public IReadOnlyList<PlayerRounds> PlayerRoundInfo => PlayerOrder is null || EditablePlayerRoundInfo.Count < PlayerOrder.Length ?
+  EditablePlayerRoundInfo :
+  PlayerOrder.Select(x => EditablePlayerRoundInfo[int.Parse(x.ToString())]).ToList();
+
+  public string? PlayerOrder { get; set; }
 
   public static Game Create(Player controllingPlayer)
   {
@@ -47,6 +51,22 @@ public record Game
       throw new ArgumentException("Cannot remove first player");
 
     EditablePlayerRoundInfo.Remove(EditablePlayerRoundInfo.Single(x => x.Player == player));
+  }
+
+  public void SetPlayerOrder(IReadOnlyList<Guid> newPlayerOrder)
+  {
+    var distinctPlayers = newPlayerOrder.Distinct().ToList();
+    if (distinctPlayers.Count != EditablePlayerRoundInfo.Count)
+      throw new ArgumentException("New player order must have the same number of players as the current game");
+    if (distinctPlayers.Any(x => !EditablePlayerRoundInfo.Select(x => x.Player!.Id).Contains(x)))
+      throw new ArgumentException("New player list must contain all players in the game");
+    if (Status != GameStatus.AcceptingPlayers)
+      throw new ArgumentException("Cannot change player order at this time");
+    if (distinctPlayers.First() != EditablePlayerRoundInfo.First().Player!.Id)
+      throw new ArgumentException("First player in new order must match first player in current order");
+
+    var playerIds = EditablePlayerRoundInfo.Select(y => y.Player!.Id).ToList();
+    PlayerOrder = newPlayerOrder.Select(x => playerIds.IndexOf(x).ToString()).Aggregate((a, b) => $"{a}{b}");
   }
 
   public void StartGame()

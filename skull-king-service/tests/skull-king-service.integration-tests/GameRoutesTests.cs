@@ -135,6 +135,71 @@ public class GameRoutesTests : IClassFixture<TestFixture>
   }
 
   [Fact]
+  public async Task CanEditPlayerOrder()
+  {
+    var createdGame = await CreateNewGame("Player 1");
+    var gameId = createdGame?.Id;
+
+    for (var i = 0; i < 3; i++)
+    {
+      var player = new PlayerDto { Name = $"Player {i + 2}" };
+      var content = JsonContent.Create(player);
+      var result = await _client.PutAsync($"/games/{gameId}/players", content);
+
+      result.EnsureSuccessStatusCode();
+    }
+
+    // Now reorder the players (0, 3, 1, 2)
+    var game = GetGame(gameId!);
+    {
+      IReadOnlyList<Guid> newOrder = [
+        game.PlayerRoundInfo[0].Player!.Id,
+        game.PlayerRoundInfo[3].Player!.Id,
+        game.PlayerRoundInfo[1].Player!.Id,
+        game.PlayerRoundInfo[2].Player!.Id
+      ];
+
+      var playerOrderContent = JsonContent.Create(new PlayerOrderDto
+      {
+        PlayerOrder = newOrder.ToList(),
+        PlayerId = game.PlayerRoundInfo[0].Player!.Id,
+        KnownHash = game.GetHashCode().ToString(),
+      });
+      var response = await _client.PutAsync($"/games/{gameId}/players/reorder", playerOrderContent);
+
+      response.EnsureSuccessStatusCode();
+      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+      game = GetGame(gameId!);
+      Assert.Equal(newOrder, game.PlayerRoundInfo.Select(x => x.Player!.Id));
+    }
+
+    {
+      // Now reorder the players (0, 2, 1, 3)
+      IReadOnlyList<Guid> newOrder2 = [
+        game.PlayerRoundInfo[0].Player!.Id,
+        game.PlayerRoundInfo[2].Player!.Id,
+        game.PlayerRoundInfo[1].Player!.Id,
+        game.PlayerRoundInfo[3].Player!.Id
+      ];
+
+      var playerOrderContent = JsonContent.Create(new PlayerOrderDto
+      {
+        PlayerOrder = newOrder2.ToList(),
+        PlayerId = game.PlayerRoundInfo[0].Player!.Id,
+        KnownHash = game.GetHashCode().ToString(),
+      });
+      var response = await _client.PutAsync($"/games/{gameId}/players/reorder", playerOrderContent);
+
+      response.EnsureSuccessStatusCode();
+      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+      game = GetGame(gameId!);
+      Assert.Equal(newOrder2, game.PlayerRoundInfo.Select(x => x.Player!.Id));
+    }
+  }
+
+  [Fact]
   public async Task CanEditPlayerName()
   {
     var createdGame = await CreateNewGame("Tester");

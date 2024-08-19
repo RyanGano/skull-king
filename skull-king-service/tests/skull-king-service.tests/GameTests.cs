@@ -244,5 +244,123 @@ public class GameTests
     Assert.Throws<InvalidOperationException>(() => game.MoveToPreviousPhase());
   }
 
+  [Fact]
+  public void CanReorderPlayers()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.AddPlayer(new Player("Mary"));
+
+    IReadOnlyList<Guid> newOrder = [
+      game.PlayerRoundInfo[0].Player!.Id,
+      game.PlayerRoundInfo[2].Player!.Id,
+      game.PlayerRoundInfo[1].Player!.Id,
+    ];
+    game.SetPlayerOrder(newOrder);
+
+    Assert.Equal(newOrder, game.PlayerRoundInfo.Select(x => x.Player!.Id));
+  }
+
+  [Fact]
+  public void CanReorderPlayersMultipleTimes()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.AddPlayer(new Player("Mary"));
+    game.AddPlayer(new Player("John"));
+
+    IReadOnlyList<Guid> newOrder = [
+      game.PlayerRoundInfo[0].Player!.Id,
+      game.PlayerRoundInfo[2].Player!.Id,
+      game.PlayerRoundInfo[1].Player!.Id,
+      game.PlayerRoundInfo[3].Player!.Id,
+    ];
+    game.SetPlayerOrder(newOrder);
+
+    Assert.Equal(newOrder, game.PlayerRoundInfo.Select(x => x.Player!.Id));
+
+    IReadOnlyList<Guid> newOrder2 = [
+      game.PlayerRoundInfo[0].Player!.Id,
+      game.PlayerRoundInfo[2].Player!.Id,
+      game.PlayerRoundInfo[1].Player!.Id,
+      game.PlayerRoundInfo[3].Player!.Id,
+    ];
+    game.SetPlayerOrder(newOrder2);
+
+    Assert.Equal(newOrder2, game.PlayerRoundInfo.Select(x => x.Player!.Id));
+  }
+
+  [Fact]
+  public void CannotReorderExtraPlayers()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.AddPlayer(new Player("Mary"));
+
+    var originalOrder = game.PlayerRoundInfo.Select(x => x.Player!.Id).ToList();
+    IReadOnlyList<Guid> newOrder = [
+      game.PlayerRoundInfo[0].Player!.Id,
+      game.PlayerRoundInfo[2].Player!.Id,
+      game.PlayerRoundInfo[1].Player!.Id,
+      new Guid()
+    ];
+
+    Assert.Throws<ArgumentException>(() => game.SetPlayerOrder(newOrder));
+    Assert.Equal(originalOrder, game.PlayerRoundInfo.Select(x => x.Player!.Id));
+  }
+
+  [Fact]
+  public void CannotReorderFakePlayers()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+
+    var originalOrder = game.PlayerRoundInfo.Select(x => x.Player!.Id).ToList();
+    IReadOnlyList<Guid> newOrder = [
+      game.PlayerRoundInfo[0].Player!.Id,
+      new Guid()
+    ];
+
+    Assert.Throws<ArgumentException>(() => game.SetPlayerOrder(newOrder));
+    Assert.Equal(originalOrder, game.PlayerRoundInfo.Select(x => x.Player!.Id));
+  }
+
+  [Fact]
+  public void CannotReorderPlayersAfterGameStarts()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.AddPlayer(new Player("Mary"));
+
+    var originalOrder = game.PlayerRoundInfo.Select(x => x.Player!.Id).ToList();
+    IReadOnlyList<Guid> newOrder = [
+      game.PlayerRoundInfo[0].Player!.Id,
+      game.PlayerRoundInfo[2].Player!.Id,
+      game.PlayerRoundInfo[1].Player!.Id,
+    ];
+    game.StartGame();
+
+    Assert.Throws<ArgumentException>(() => game.SetPlayerOrder(newOrder));
+    Assert.Equal(originalOrder, game.PlayerRoundInfo.Select(x => x.Player!.Id));
+  }
+
+  [Fact]
+  public void CannotReorderFirstPlayer()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.AddPlayer(new Player("Mary"));
+
+    var originalOrder = game.PlayerRoundInfo.Select(x => x.Player!.Id).ToList();
+    IReadOnlyList<Guid> newOrder = [
+      game.PlayerRoundInfo[2].Player!.Id,
+      game.PlayerRoundInfo[0].Player!.Id,
+      game.PlayerRoundInfo[1].Player!.Id,
+    ];
+
+    Assert.Throws<ArgumentException>(() => game.SetPlayerOrder(newOrder));
+    Assert.Equal(originalOrder, game.PlayerRoundInfo.Select(x => x.Player!.Id));
+  }
+
   private static Random s_rand = new Random();
 }
