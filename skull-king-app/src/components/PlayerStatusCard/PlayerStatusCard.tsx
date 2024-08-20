@@ -27,7 +27,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
   useEffect(() => {
     setCurrentBonus(0);
     setCurrentTricksTaken(0);
-  }, [turnPhase]);
+  }, [turnPhase, playerRounds.rounds.length]);
 
   const getBidContent = () => {
     if (!playerRounds) {
