@@ -14,7 +14,8 @@ app.UseCors();
 
 GameRoutes.Register(app, AllowSkullKingApp);
 
-app.MapGet("/", () => "Skull King Api");
+app.MapGet("/", () => "Skull King Api")
+    .RequireCors(AllowSkullKingApp);
 
 app.Run();
 
