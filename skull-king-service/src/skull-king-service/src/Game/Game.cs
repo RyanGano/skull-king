@@ -3,10 +3,14 @@ using System.Text.Json;
 public record Game
 {
   public required string Id { get; init; }
+
   public GameStatus Status { get; private set; }
+
   public IReadOnlyList<PlayerRounds> PlayerRoundInfo => PlayerOrder is null || EditablePlayerRoundInfo.Count < PlayerOrder.Length ?
   EditablePlayerRoundInfo :
   PlayerOrder.Select(x => EditablePlayerRoundInfo[int.Parse(x.ToString())]).ToList();
+
+  public bool IsRandomBid { get; private set; }
 
   public string? PlayerOrder { get; set; }
 
@@ -71,13 +75,25 @@ public record Game
 
   public void StartGame()
   {
+    StartGame(false);
+  }
+
+  public void StartGame(bool isRandomBid)
+  {
     if (PlayerRoundInfo.Count < c_minPlayers)
       throw new InvalidOperationException("Cannot start game with less than 2 players");
     if (Status != GameStatus.AcceptingPlayers)
       throw new InvalidOperationException("Game has already started");
 
+    IsRandomBid = isRandomBid;
     Status = GameStatus.BiddingOpen;
     EditablePlayerRoundInfo.ForEach(x => x.AddRound(PlayerRoundInfo.Count));
+
+    if (IsRandomBid)
+    {
+      SetRandomBids();
+      MoveToNextPhase();
+    }
   }
 
   public override int GetHashCode()
@@ -118,6 +134,12 @@ public record Game
         playerRoundInfo.AddRound(PlayerRoundInfo.Count);
 
       Status = GameStatus.BiddingOpen;
+
+      if (IsRandomBid)
+      {
+        SetRandomBids();
+        MoveToNextPhase();
+      }
     }
   }
 
@@ -156,6 +178,24 @@ public record Game
       Status = Status,
       PlayerRoundInfo = PlayerRoundInfo.Select(x => x.MapToDto()).ToList(),
     };
+  }
+
+  private void SetRandomBids()
+  {
+    // Split up the number of tricks (MaxBid) between the players
+    var random = new Random();
+
+    var remainingTricks = EditablePlayerRoundInfo.First().Rounds.Count;
+
+    foreach (var playerRoundInfo in EditablePlayerRoundInfo)
+    {
+      var bid = playerRoundInfo != EditablePlayerRoundInfo.Last()
+        ? random.Next(0, remainingTricks + 1)
+        : remainingTricks;
+
+      playerRoundInfo.SetBid(bid);
+      remainingTricks -= bid;
+    }
   }
 
   private Game()

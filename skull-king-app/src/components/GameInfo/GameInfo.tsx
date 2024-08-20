@@ -10,7 +10,7 @@ export interface GameInfoProps {
   game: Game | null;
   me: Player;
   editMyName: (name: string) => void;
-  startGame?: () => void;
+  startGame?: (randomBids: boolean) => void;
 }
 
 export const GameInfo = (props: GameInfoProps) => {
@@ -73,7 +73,8 @@ export const GameInfo = (props: GameInfoProps) => {
           </Stack>
         </Stack>
       )}
-      {startGame && <Button onClick={startGame}>Start Game</Button>}
+      {startGame && <Button onClick={() => startGame(false)}>Start Game</Button>}
+      {startGame && <Button onClick={() => startGame(true)}>Start Random Bid Game</Button>}
     </Stack>
   );
 };

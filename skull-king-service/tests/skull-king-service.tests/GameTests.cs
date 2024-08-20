@@ -362,5 +362,35 @@ public class GameTests
     Assert.Equal(originalOrder, game.PlayerRoundInfo.Select(x => x.Player!.Id));
   }
 
+  [Theory]
+  [InlineData(false)]
+  [InlineData(true)]
+  public void CanStartRandomBidGame(bool gameIsRandomBid)
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+
+    game.StartGame(gameIsRandomBid);
+
+    Assert.Equal(gameIsRandomBid, game.IsRandomBid);
+  }
+
+  [Fact]
+  public void RandomBidGameSetsBidsAutomaticall()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.AddPlayer(new Player("Mary"));
+
+    game.StartGame(true);
+
+    for (int i = 1; i <= 10; i++)
+    {
+      Assert.True(game.Status == GameStatus.BiddingClosed);
+      Assert.Equal(game.PlayerRoundInfo.First().Rounds.Count, game.PlayerRoundInfo.Select(x => x.Rounds.Last().Bid).Sum());
+      game.MoveToNextPhase();
+    }
+  }
+
   private static Random s_rand = new Random();
 }

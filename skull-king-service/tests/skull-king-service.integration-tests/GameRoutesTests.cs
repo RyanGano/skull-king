@@ -280,6 +280,34 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     }
   }
 
+  [Theory]
+  [InlineData(true)]
+  [InlineData(false)]
+  public async Task CanStartGameInRandomBidMode(bool useRandomBidMode)
+  {
+    var createdGame = await CreateNewGame("Player 1");
+    var gameId = createdGame?.Id;
+
+    var newPlayer = new PlayerDto { Name = "Player 2" };
+    var playerContent = JsonContent.Create(newPlayer);
+    await _client.PutAsync($"/games/{gameId}/players", playerContent);
+
+    var game = GetGame(gameId!);
+
+    var response = await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&randomBidMode={useRandomBidMode}&knownHash={game.GetHashCode()}");
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    game = GetGame(gameId!);
+    Assert.Equal(useRandomBidMode, game.IsRandomBid);
+
+    if (useRandomBidMode)
+    {
+      response = await _client.GetAsync($"/games/{gameId}/movenext?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+      game = GetGame(gameId!);
+      Assert.Equal(GameStatus.BiddingClosed, game.Status);
+    }
+  }
+
   [Fact]
   public async Task CannotStartGameWithOutdatedHash()
   {

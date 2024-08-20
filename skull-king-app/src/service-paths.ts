@@ -3,7 +3,7 @@ const BaseGameUriInternal = `${BaseAppUriInternal}games`;
 
 const CreateNewGameInternal = BaseGameUriInternal;
 const GetGameInternal = `${BaseGameUriInternal}/GAME_ID/?knownHash=KNOWN_HASH`;
-const StartGameInternal = `${BaseGameUriInternal}/GAME_ID/start?playerId=PLAYER_ID&knownHash=KNOWN_HASH`;
+const StartGameInternal = `${BaseGameUriInternal}/GAME_ID/start?playerId=PLAYER_ID&knownHash=KNOWN_HASH&randomBidMode=RANDOM_BIDS`;
 const GetGamePlayerInternal = `${BaseGameUriInternal}/GAME_ID/players`;
 const GameMoveNextPhaseInternal = `${BaseGameUriInternal}/GAME_ID/movenext?playerId=PLAYER_ID&knownHash=KNOWN_HASH`;
 const GameMovePreviousPhaseInternal = `${BaseGameUriInternal}/GAME_ID/moveprevious?playerId=PLAYER_ID&knownHash=KNOWN_HASH`;
@@ -45,12 +45,14 @@ export function GetGameUri(gameId: string, currentHash?: string) {
 export function StartGameUri(
   gameId: string,
   playerId: string,
-  currentHash: string
+  currentHash: string,
+  randomBids: boolean
 ) {
   return formatUriString(StartGameInternal, [
     { key: "GAME_ID", value: gameId },
     { key: "PLAYER_ID", value: playerId },
     { key: "KNOWN_HASH", value: currentHash },
+    { key: "RANDOM_BIDS", value: randomBids.toString() },
   ]);
 }
 

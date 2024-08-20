@@ -180,24 +180,29 @@ const App = () => {
     [game?.id, me, updateGame]
   );
 
-  const startGame = useCallback(async () => {
-    if (
-      !game?.id ||
-      game.playerRoundInfo?.length < 2 ||
-      game.playerRoundInfo[0].player.id !== me?.id
-    ) {
-      console.log("Cannot start game");
-      return;
-    }
+  const startGame = useCallback(
+    async (randomBids: boolean) => {
+      if (
+        !game?.id ||
+        game.playerRoundInfo?.length < 2 ||
+        game.playerRoundInfo[0].player.id !== me?.id
+      ) {
+        console.log("Cannot start game");
+        return;
+      }
 
-    const result = await callGetRoute(StartGameUri(game.id, me.id, game.hash));
+      const result = await callGetRoute(
+        StartGameUri(game.id, me.id, game.hash, randomBids)
+      );
 
-    if (result.status !== 200) {
-      console.log("Could not start game", result.status, result.statusText);
-    } else {
-      updateGame(game.id, currentHashRef.current ?? "");
-    }
-  }, [game?.hash, game?.id, game?.playerRoundInfo, me?.id, updateGame]);
+      if (result.status !== 200) {
+        console.log("Could not start game", result.status, result.statusText);
+      } else {
+        updateGame(game.id, currentHashRef.current ?? "");
+      }
+    },
+    [game?.hash, game?.id, game?.playerRoundInfo, me?.id, updateGame]
+  );
 
   const moveToPreviousGameStatus = useCallback(
     async (hash?: string) => {
