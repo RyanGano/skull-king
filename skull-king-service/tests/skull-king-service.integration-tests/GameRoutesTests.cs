@@ -109,7 +109,7 @@ public class GameRoutesTests : IClassFixture<TestFixture>
   [Fact]
   public async Task CannotRetrieveInvalidGameId()
   {
-    var response = await _client.GetAsync($"/games/INVALID");
+    var response = await _client.GetAsync($"/games/0000");
 
     Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
   }
@@ -123,6 +123,30 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     var newPlayer = new PlayerDto { Name = "Player 2" };
     var playerContent = JsonContent.Create(newPlayer);
     var response = await _client.PutAsync($"/games/{gameId}/players", playerContent);
+
+    response.EnsureSuccessStatusCode();
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var responseContent = await response.Content.ReadAsStringAsync();
+    var responsePlayer = JsonSerializer.Deserialize<PlayerDto>(responseContent, _JsonSerializerOptions);
+
+    Assert.Equal("Player 2", responsePlayer?.Name);
+    Assert.NotNull(responsePlayer?.Id);
+  }
+
+  [Fact]
+  public async Task CanAddPlayerToExistingGameWithNormalizingId()
+  {
+    var nonNormalizedGameId = "OI01";
+    var createdGame = Game.Create(new GameId(nonNormalizedGameId), new Player("Tester"));
+    AddGame(createdGame);
+    var gameId = createdGame?.Id;
+
+    Assert.NotEqual(nonNormalizedGameId, gameId);
+
+    var newPlayer = new PlayerDto { Name = "Player 2" };
+    var playerContent = JsonContent.Create(newPlayer);
+    var response = await _client.PutAsync($"/games/{nonNormalizedGameId}/players", playerContent);
 
     response.EnsureSuccessStatusCode();
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -458,6 +482,13 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
 
     return responseGame;
+  }
+
+  private void AddGame(Game game)
+  {
+    _dbContext.Games.Add(game);
+    _dbContext.Hashes.Add(new Hash { GameId = game.Id, Value = game.GetHashCode().ToString() });
+    _dbContext.SaveChanges();
   }
 
   private Game GetGame(string gameId)

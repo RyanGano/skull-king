@@ -34,11 +34,11 @@ public static class GameRoutes
     .WithName("CreateGame")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}", async (string id, HttpContext httpContext, SkullKingDbContext db, string? knownHash = null) =>
+    app.MapGet("/games/{id}", async (GameId id, HttpContext httpContext, SkullKingDbContext db, string? knownHash = null) =>
     {
       if (knownHash is not null)
       {
-        var currentHash = db.Hashes.Find(id);
+        var currentHash = db.Hashes.Find(id.Value);
         if (currentHash?.Value == knownHash)
         {
           httpContext.Response.StatusCode = StatusCodes.Status304NotModified;
@@ -58,7 +58,7 @@ public static class GameRoutes
     .WithName("GetGame")
     .RequireCors(cors);
 
-    app.MapPut("/games/{id}/players", async (string id, PlayerDto player, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapPut("/games/{id}/players", async (GameId id, PlayerDto player, HttpContext httpContext, SkullKingDbContext db) =>
     {
       var game = await GetFullGame(id, db);
       if (game is null)
@@ -96,11 +96,11 @@ public static class GameRoutes
     .WithName("AddPlayerToGame")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}/start", async (string id, Guid playerId, string knownHash, bool? randomBidMode, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapGet("/games/{id}/start", async (GameId id, Guid playerId, string knownHash, bool? randomBidMode, HttpContext httpContext, SkullKingDbContext db) =>
     {
       // Check the knownHash compared to current stored hash
       // Do not allow updates if the user's hash doesn't match the current hash
-      var currentHash = db.Hashes.Find(id);
+      var currentHash = db.Hashes.Find(id.Value);
       if (currentHash?.Value != knownHash)
       {
         httpContext.Response.StatusCode = StatusCodes.Status412PreconditionFailed;
@@ -139,11 +139,11 @@ public static class GameRoutes
     .RequireCors(cors);
 
 
-    app.MapPut("/games/{id}/players/reorder", async (string id, PlayerOrderDto playerOrderDto, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapPut("/games/{id}/players/reorder", async (GameId id, PlayerOrderDto playerOrderDto, HttpContext httpContext, SkullKingDbContext db) =>
     {
       // Check the knownHash compared to current stored hash
       // Do not allow updates if the user's hash doesn't match the current hash
-      var currentHash = db.Hashes.Find(id);
+      var currentHash = db.Hashes.Find(id.Value);
       if (currentHash?.Value != playerOrderDto.KnownHash)
       {
         httpContext.Response.StatusCode = StatusCodes.Status412PreconditionFailed;
@@ -179,7 +179,7 @@ public static class GameRoutes
     .WithName("ReorderPlayers")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}/movenext", async (string id, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapGet("/games/{id}/movenext", async (GameId id, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
     {
       var game = await GetFullGame(id, db);
       if (game is null)
@@ -196,7 +196,7 @@ public static class GameRoutes
 
       // Check the knownHash compared to current stored hash
       // Do not allow updates if the user's hash doesn't match the current hash
-      var currentHash = db.Hashes.Find(id);
+      var currentHash = db.Hashes.Find(id.Value);
       if (currentHash?.Value != knownHash)
       {
         httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
@@ -223,7 +223,7 @@ public static class GameRoutes
     .WithName("MoveToNextPhase")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}/moveprevious", async (string id, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapGet("/games/{id}/moveprevious", async (GameId id, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
     {
       var game = await GetFullGame(id, db);
       if (game is null)
@@ -240,7 +240,7 @@ public static class GameRoutes
 
       // Check the knownHash compared to current stored hash
       // Do not allow updates if the user's hash doesn't match the current hash
-      var currentHash = db.Hashes.Find(id);
+      var currentHash = db.Hashes.Find(id.Value);
       if (currentHash?.Value != knownHash)
       {
         httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
@@ -263,7 +263,7 @@ public static class GameRoutes
     .WithName("MoveToPreviousPhase")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}/setbid", async (string id, int bid, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapGet("/games/{id}/setbid", async (GameId id, int bid, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
     {
       var game = await GetFullGame(id, db);
       if (game is null)
@@ -282,7 +282,7 @@ public static class GameRoutes
 
       // Check the knownHash compared to current stored hash
       // Do not allow updates if the user's hash doesn't match the current hash
-      var currentHash = db.Hashes.Find(id);
+      var currentHash = db.Hashes.Find(id.Value);
       if (currentHash?.Value != knownHash)
       {
         httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
@@ -305,7 +305,7 @@ public static class GameRoutes
     .WithName("SetBid")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}/setscore", async (string id, int tricksTaken, int bonus, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapGet("/games/{id}/setscore", async (GameId id, int tricksTaken, int bonus, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
     {
       var game = await GetFullGame(id, db);
       if (game is null)
@@ -324,7 +324,7 @@ public static class GameRoutes
 
       // Check the knownHash compared to current stored hash
       // Do not allow updates if the user's hash doesn't match the current hash
-      var currentHash = db.Hashes.Find(id);
+      var currentHash = db.Hashes.Find(id.Value);
       if (currentHash?.Value != knownHash)
       {
         httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
@@ -347,14 +347,18 @@ public static class GameRoutes
     .RequireCors(cors);
   }
 
-  private static async Task<Game?> GetFullGame(string id, SkullKingDbContext db)
+  private static async Task<Game?> GetFullGame(GameId gameId, SkullKingDbContext db)
   {
+    // Normalize the GameId so users who typed O or I 
+    // instead of 0 or 1 can still get the game
+    // GameId gameId = new GameId(id);
+
     var game = await db.Games
       .Include(g => g.PlayerRoundInfo)
          .ThenInclude(info => info.Player)
       .Include(g => g.PlayerRoundInfo)
         .ThenInclude(info => info.Rounds)
-      .Where(x => x.Id == id)
+      .Where(x => x.Id == gameId.Value)
       .FirstOrDefaultAsync();
 
     return game;

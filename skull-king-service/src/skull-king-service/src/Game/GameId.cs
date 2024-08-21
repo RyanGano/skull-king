@@ -1,7 +1,8 @@
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
-public record GameId
+public record GameId : IParsable<GameId>
 {
   public GameId() : this(Path.GetRandomFileName())
   {
@@ -19,6 +20,32 @@ public record GameId
 
   [Key]
   public string Value { get; init; }
+
+  public static GameId Parse(string s, IFormatProvider? provider)
+  {
+    return new GameId(s);
+  }
+
+  public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out GameId result)
+  {
+    if (s is null)
+    {
+      result = null;
+      return false;
+    }
+
+    try
+    {
+      result = Parse(s, provider);
+    }
+    catch (ArgumentException)
+    {
+      result = null;
+      return false;
+    }
+
+    return true;
+  }
 
   private static string NormalizeGameId(string input)
   {

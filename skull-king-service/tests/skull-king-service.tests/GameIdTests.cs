@@ -50,6 +50,23 @@ public class GameIdTests
         }
     }
 
+    [Theory]
+    [InlineData("AAAA", true)]
+    [InlineData("5dr3", true)]
+    [InlineData("0000", true)]
+    [InlineData("AAAAtr", true)]
+    [InlineData("$%##", false)]
+    [InlineData("AA", false)]
+    public void CanTryParseId(string id, bool shouldParse)
+    {
+        var didParse = GameId.TryParse(id, null, out var gameId);
+        Assert.Equal(shouldParse, didParse);
+        if (shouldParse)
+            Assert.NotNull(gameId);
+        else
+            Assert.Null(gameId);
+    }
+
     [Fact]
     public void GameIdFromAnotherGameIdIsEqualButNotSame()
     {
