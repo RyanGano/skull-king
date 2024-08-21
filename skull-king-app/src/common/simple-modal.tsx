@@ -31,9 +31,9 @@ export const SimpleModal = (props: SimpleModalProps) => {
     <div>
       <Modal
         style={{
-          fontFamily: "Pirata One",
+          fontFamily: "Jim Nightshade",
           fontWeight: 400,
-          fontSize: "18px",
+          fontSize: "24px",
           fontStyle: "normal",
         }}
         show={show}
