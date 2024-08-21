@@ -375,8 +375,26 @@ public class GameTests
     Assert.Equal(gameIsRandomBid, game.IsRandomBid);
   }
 
+  [Theory]
+  [InlineData(false)]
+  [InlineData(true)]
+  public void RandomBidGameAddsThirdPlayerIfNeeded(bool hasEnoughPlayers)
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+
+    if (hasEnoughPlayers)
+      game.AddPlayer(new Player("Mary"));
+
+
+    game.StartGame(true);
+
+    Assert.True(game.IsRandomBid);
+    Assert.Equal(3, game.PlayerRoundInfo.Count);
+  }
+
   [Fact]
-  public void RandomBidGameSetsBidsAutomaticall()
+  public void RandomBidGameSetsBidsAutomatically()
   {
     var game = Game.Create(new Player("Ryan"));
     game.AddPlayer(new Player("Bob"));

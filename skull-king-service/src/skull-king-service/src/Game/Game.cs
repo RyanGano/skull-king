@@ -85,6 +85,9 @@ public record Game
     if (Status != GameStatus.AcceptingPlayers)
       throw new InvalidOperationException("Game has already started");
 
+    if (isRandomBid && PlayerRoundInfo.Count < c_minRandomPlayers)
+      AddPlayer(new Player("Ghost Player"));
+
     IsRandomBid = isRandomBid;
     Status = GameStatus.BiddingOpen;
     EditablePlayerRoundInfo.ForEach(x => x.AddRound(PlayerRoundInfo.Count));
@@ -206,5 +209,6 @@ public record Game
 
   private const int c_minPlayers = 2;
   private const int c_maxPlayers = 8;
+  private const int c_minRandomPlayers = 3;
   private List<PlayerRounds> EditablePlayerRoundInfo { get; init; }
 }

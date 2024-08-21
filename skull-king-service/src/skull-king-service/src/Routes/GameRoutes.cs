@@ -122,9 +122,23 @@ public static class GameRoutes
 
       try
       {
+        var playerCount = game.PlayerRoundInfo.Count;
         game.StartGame(randomBidMode ?? false);
-        db.Rounds.AddRange(game.PlayerRoundInfo.Select(x => x.Rounds!.Last()));
-        db.PlayerRoundInfos.UpdateRange(game.PlayerRoundInfo);
+
+        PlayerRounds? addedPlayerRound = null;
+        Round? addedRound = null;
+
+        if (game.PlayerRoundInfo.Count != playerCount)
+        {
+          addedPlayerRound = game.PlayerRoundInfo.Skip(playerCount).First();
+          db.Players.Add(addedPlayerRound.Player!);
+          addedRound = addedPlayerRound.Rounds!.Last();
+          db.Rounds.Add(addedRound);
+          db.PlayerRoundInfos.Add(addedPlayerRound);
+        }
+
+        db.Rounds.AddRange(game.PlayerRoundInfo.Select(x => x.Rounds!.Last()).Where(x => x != addedRound));
+        db.PlayerRoundInfos.UpdateRange(game.PlayerRoundInfo.Where(x => x != addedPlayerRound));
         db.Games.Update(game);
         await UpdateHashAndSaveAsync(db, game);
 
