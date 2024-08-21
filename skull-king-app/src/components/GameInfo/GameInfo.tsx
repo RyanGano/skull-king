@@ -35,56 +35,54 @@ export const GameInfo = (props: GameInfoProps) => {
   };
 
   return (
-    <div className="pirateFont">
-      <Stack gap={2}>
-        {showEditPlayerUI && (
-          <SimpleModal
-            title={"Edit Player Name"}
-            content={getEditPlayerNameUI()}
-            defaultButtonContent={"Save"}
-            onAccept={() => editMyName(myUpdatedName!)}
-            onCancel={() => setShowEditPlayerUI(false)}
-            allowAccept={!!myUpdatedName}
-            show={true}
-          />
-        )}
-        {game?.status === GameStatus.acceptingPlayers && (
-          <span>Game ID: {game?.id}</span>
-        )}
-        {game?.status === GameStatus.acceptingPlayers && (
-          <Stack direction="horizontal" gap={3} className="playerList">
-            <>Players:</>
-            <Stack gap={2}>
-              {game?.playerRoundInfo.map((x) => (
-                <div key={x.player.id} className="playerDisplay">
-                  {x.player.name}
-                  {me.id === x.player.id ? (
-                    <Button
-                      variant="link"
-                      className={"textLink"}
-                      onClick={() => setShowEditPlayerUI(true)}
-                    >
-                      edit
-                    </Button>
-                  ) : (
-                    ""
-                  )}
-                </div>
-              ))}
-            </Stack>
+    <Stack gap={2}>
+      {showEditPlayerUI && (
+        <SimpleModal
+          title={"Edit Player Name"}
+          content={getEditPlayerNameUI()}
+          defaultButtonContent={"Save"}
+          onAccept={() => editMyName(myUpdatedName!)}
+          onCancel={() => setShowEditPlayerUI(false)}
+          allowAccept={!!myUpdatedName}
+          show={true}
+        />
+      )}
+      {game?.status === GameStatus.acceptingPlayers && (
+        <span>Game ID: {game?.id}</span>
+      )}
+      {game?.status === GameStatus.acceptingPlayers && (
+        <Stack direction="horizontal" gap={3} className="playerList">
+          <>Players:</>
+          <Stack gap={2}>
+            {game?.playerRoundInfo.map((x) => (
+              <div key={x.player.id} className="playerDisplay">
+                {x.player.name}
+                {me.id === x.player.id ? (
+                  <Button
+                    variant="link"
+                    className={"textLink"}
+                    onClick={() => setShowEditPlayerUI(true)}
+                  >
+                    edit
+                  </Button>
+                ) : (
+                  ""
+                )}
+              </div>
+            ))}
           </Stack>
-        )}
-        {startGame && (
-          <Button className="buttonStyle" onClick={() => startGame(false)}>
-            Start Game
-          </Button>
-        )}
-        {startGame && (
-          <Button className="buttonStyle" onClick={() => startGame(true)}>
-            Start Random Bid Game
-          </Button>
-        )}
-      </Stack>
-    </div>
+        </Stack>
+      )}
+      {startGame && (
+        <Button className="buttonStyle" onClick={() => startGame(false)}>
+          Start Game
+        </Button>
+      )}
+      {startGame && (
+        <Button className="buttonStyle" onClick={() => startGame(true)}>
+          Start Random Bid Game
+        </Button>
+      )}
+    </Stack>
   );
 };

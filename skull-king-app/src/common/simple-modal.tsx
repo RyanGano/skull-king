@@ -28,33 +28,41 @@ export const SimpleModal = (props: SimpleModalProps) => {
     fullScreen,
   } = props;
   return (
-    <Modal
-      show={show}
-      onHide={onCancel}
-      centered={centered ?? true}
-      fullscreen={fullScreen ?? true ? "sm-down" : ""}
-    >
-      <Modal.Header closeButton>
-        <Modal.Title>{title}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>{content}</Modal.Body>
-      <Modal.Footer>
-        {alternateButtonContent && (
-          <Button variant="secondary" onClick={onCancel}>
-            {alternateButtonContent}
-          </Button>
-        )}
-        {(allowAccept ?? true) && (
-          <Button variant="primary" onClick={onAccept}>
-            {defaultButtonContent}
-          </Button>
-        )}
-        {!(allowAccept ?? true) && (
-          <Button variant="primary" disabled>
-            {defaultButtonContent}
-          </Button>
-        )}
-      </Modal.Footer>
-    </Modal>
+    <div>
+      <Modal
+        style={{
+          fontFamily: "Pirata One",
+          fontWeight: 400,
+          fontSize: "18px",
+          fontStyle: "normal",
+        }}
+        show={show}
+        onHide={onCancel}
+        centered={centered ?? true}
+        fullscreen={fullScreen ?? true ? "sm-down" : ""}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>{title}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>{content}</Modal.Body>
+        <Modal.Footer>
+          {alternateButtonContent && (
+            <Button variant="secondary" onClick={onCancel}>
+              {alternateButtonContent}
+            </Button>
+          )}
+          {(allowAccept ?? true) && (
+            <Button variant="primary" onClick={onAccept}>
+              {defaultButtonContent}
+            </Button>
+          )}
+          {!(allowAccept ?? true) && (
+            <Button variant="primary" disabled>
+              {defaultButtonContent}
+            </Button>
+          )}
+        </Modal.Footer>
+      </Modal>
+    </div>
   );
 };

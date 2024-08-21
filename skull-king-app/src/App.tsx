@@ -18,6 +18,7 @@ import { GameInfo } from "./components/GameInfo";
 import { GameSetup } from "./components/GameSetup";
 import { useCookies } from "react-cookie";
 import { SimpleModal } from "./common/simple-modal";
+import classNames from "classnames";
 
 const App = () => {
   const [game, setGame] = useState<Game | null>(null);
@@ -275,7 +276,7 @@ const App = () => {
   }, [setCookie]);
 
   return (
-    <div className="App">
+    <div className={classNames("App", "pirateFont")}>
       <SimpleModal
         title={"Exit Game"}
         content={

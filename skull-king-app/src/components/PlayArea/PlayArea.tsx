@@ -138,7 +138,7 @@ export const PlayArea = (props: PlayAreaProps) => {
     [];
 
   return (
-    <>
+    <div>
       {showOverlay && (
         <div className={`overlay`}>
           <Spinner animation="border" role="status"></Spinner>
@@ -200,6 +200,6 @@ export const PlayArea = (props: PlayAreaProps) => {
           }
         />
       </div>
-    </>
+    </div>
   );
 };
