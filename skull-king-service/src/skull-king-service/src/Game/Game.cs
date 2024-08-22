@@ -12,6 +12,8 @@ public record Game
 
   public bool IsRandomBid { get; private set; }
 
+  public GameDifficulty? Difficulty { get; private set; }
+
   public string? PlayerOrder { get; set; }
 
   public static Game Create(Player controllingPlayer)
@@ -75,10 +77,10 @@ public record Game
 
   public void StartGame()
   {
-    StartGame(false);
+    StartGame(false, 0);
   }
 
-  public void StartGame(bool isRandomBid)
+  public void StartGame(bool isRandomBid, GameDifficulty difficulty)
   {
     if (PlayerRoundInfo.Count < c_minPlayers)
       throw new InvalidOperationException("Cannot start game with less than 2 players");
@@ -87,6 +89,9 @@ public record Game
 
     if (isRandomBid && PlayerRoundInfo.Count < c_minRandomPlayers)
       AddPlayer(new Player("Ghost Player"));
+
+    if (isRandomBid)
+      Difficulty = difficulty;
 
     IsRandomBid = isRandomBid;
     Status = GameStatus.BiddingOpen;
@@ -188,13 +193,17 @@ public record Game
     // Split up the number of tricks (MaxBid) between the players
     var random = new Random();
 
-    var remainingTricks = EditablePlayerRoundInfo.First().Rounds.Count;
+    var numberOfTricks = EditablePlayerRoundInfo.First().Rounds.Count;
+    var minBidTotal = int.Max(0, numberOfTricks - (int)Difficulty!.Value);
+    var maxBidTotal = numberOfTricks + (int)Difficulty!.Value;
+
+    var remainingTricks = random.Next(minBidTotal, maxBidTotal + 1);
 
     foreach (var playerRoundInfo in EditablePlayerRoundInfo)
     {
       var bid = playerRoundInfo != EditablePlayerRoundInfo.Last()
-        ? random.Next(0, remainingTricks + 1)
-        : remainingTricks;
+        ? random.Next(0, int.Min(numberOfTricks + 1, remainingTricks + 1))
+        : int.Min(numberOfTricks, remainingTricks);
 
       playerRoundInfo.SetBid(bid);
       remainingTricks -= bid;

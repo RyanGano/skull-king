@@ -305,9 +305,11 @@ public class GameRoutesTests : IClassFixture<TestFixture>
   }
 
   [Theory]
-  [InlineData(true)]
-  [InlineData(false)]
-  public async Task CanStartGameInRandomBidMode(bool useRandomBidMode)
+  [InlineData(true, GameDifficulty.Easy)]
+  [InlineData(true, GameDifficulty.Medium)]
+  [InlineData(true, GameDifficulty.Hard)]
+  [InlineData(false, GameDifficulty.Easy)]
+  public async Task CanStartGameInRandomBidMode(bool useRandomBidMode, GameDifficulty gameDifficulty)
   {
     var createdGame = await CreateNewGame("Player 1");
     var gameId = createdGame?.Id;
@@ -318,10 +320,13 @@ public class GameRoutesTests : IClassFixture<TestFixture>
 
     var game = GetGame(gameId!);
 
-    var response = await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&randomBidMode={useRandomBidMode}&knownHash={game.GetHashCode()}");
+    var response = await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&randomBidMode={useRandomBidMode}&gameDifficulty={gameDifficulty}&knownHash={game.GetHashCode()}");
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     game = GetGame(gameId!);
     Assert.Equal(useRandomBidMode, game.IsRandomBid);
+
+    if (useRandomBidMode)
+      Assert.Equal(gameDifficulty, game.Difficulty);
 
     if (useRandomBidMode)
     {

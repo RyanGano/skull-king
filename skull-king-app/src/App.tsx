@@ -12,7 +12,7 @@ import {
   GetWarmupUri,
   StartGameUri,
 } from "./service-paths";
-import { Game, GameStatus, Player } from "./types/game";
+import { Game, GameDifficulty, GameStatus, Player } from "./types/game";
 import { PlayArea } from "./components/PlayArea";
 import { GameInfo } from "./components/GameInfo";
 import { GameSetup } from "./components/GameSetup";
@@ -182,7 +182,7 @@ const App = () => {
   );
 
   const startGame = useCallback(
-    async (randomBids: boolean) => {
+    async (randomBids: boolean, gameDifficulty: GameDifficulty) => {
       if (
         !game?.id ||
         game.playerRoundInfo?.length < 2 ||
@@ -193,7 +193,7 @@ const App = () => {
       }
 
       const result = await callGetRoute(
-        StartGameUri(game.id, me.id, game.hash, randomBids)
+        StartGameUri(game.id, me.id, game.hash, randomBids, gameDifficulty)
       );
 
       if (result.status !== 200) {

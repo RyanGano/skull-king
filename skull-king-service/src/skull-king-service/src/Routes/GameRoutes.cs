@@ -96,7 +96,7 @@ public static class GameRoutes
     .WithName("AddPlayerToGame")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}/start", async (GameId id, Guid playerId, string knownHash, bool? randomBidMode, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapGet("/games/{id}/start", async (GameId id, Guid playerId, string knownHash, bool? randomBidMode, GameDifficulty? gameDifficulty, HttpContext httpContext, SkullKingDbContext db) =>
     {
       // Check the knownHash compared to current stored hash
       // Do not allow updates if the user's hash doesn't match the current hash
@@ -123,7 +123,7 @@ public static class GameRoutes
       try
       {
         var playerCount = game.PlayerRoundInfo.Count;
-        game.StartGame(randomBidMode ?? false);
+        game.StartGame(randomBidMode ?? false, gameDifficulty ?? GameDifficulty.Easy);
 
         PlayerRounds? addedPlayerRound = null;
         Round? addedRound = null;

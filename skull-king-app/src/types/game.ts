@@ -18,7 +18,11 @@ export type Player = {
   name: string;
 };
 
-
+export enum GameDifficulty {
+  Easy = 0,
+  Medium = 1,
+  Hard = 2,
+}
 
 export type Game = {
   id: string;

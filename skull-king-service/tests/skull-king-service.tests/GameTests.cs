@@ -370,7 +370,7 @@ public class GameTests
     var game = Game.Create(new Player("Ryan"));
     game.AddPlayer(new Player("Bob"));
 
-    game.StartGame(gameIsRandomBid);
+    game.StartGame(gameIsRandomBid, 0);
 
     Assert.Equal(gameIsRandomBid, game.IsRandomBid);
   }
@@ -387,7 +387,7 @@ public class GameTests
       game.AddPlayer(new Player("Mary"));
 
 
-    game.StartGame(true);
+    game.StartGame(true, GameDifficulty.Easy);
 
     Assert.True(game.IsRandomBid);
     Assert.Equal(3, game.PlayerRoundInfo.Count);
@@ -400,7 +400,7 @@ public class GameTests
     game.AddPlayer(new Player("Bob"));
     game.AddPlayer(new Player("Mary"));
 
-    game.StartGame(true);
+    game.StartGame(true, GameDifficulty.Easy);
 
     for (int i = 1; i <= 10; i++)
     {
@@ -408,6 +408,69 @@ public class GameTests
       Assert.Equal(game.PlayerRoundInfo.First().Rounds.Count, game.PlayerRoundInfo.Select(x => x.Rounds.Last().Bid).Sum());
       game.MoveToNextPhase();
     }
+  }
+
+  [Fact]
+  public void DifficultyIsNullForNonRandomBidGame()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.AddPlayer(new Player("Mary"));
+
+    game.StartGame(false, GameDifficulty.Easy);
+
+    Assert.Null(game.Difficulty);
+  }
+
+  [Theory]
+  [InlineData(GameDifficulty.Easy)]
+  [InlineData(GameDifficulty.Medium)]
+  [InlineData(GameDifficulty.Hard)]
+  public void SetRandomGameDificulty(GameDifficulty difficulty)
+  {
+    var game = Game.Create(new Player("Ryan"));
+    game.AddPlayer(new Player("Bob"));
+    game.AddPlayer(new Player("Mary"));
+
+    game.StartGame(true, difficulty);
+
+    Assert.Equal(difficulty, game.Difficulty);
+
+    bool hasImperfectBid = false;
+
+    for (int i = 1; i <= 10; i++)
+    {
+      var numberOfTricks = game.PlayerRoundInfo.First().Rounds.Count;
+      var minBid = difficulty switch
+      {
+        GameDifficulty.Easy => int.Max(0, numberOfTricks),
+        GameDifficulty.Medium => int.Max(0, numberOfTricks - 1),
+        GameDifficulty.Hard => int.Max(0, numberOfTricks - 2),
+        _ => throw new ArgumentException("Invalid difficulty")
+      };
+
+      var maxBid = difficulty switch
+      {
+        GameDifficulty.Easy => numberOfTricks,
+        GameDifficulty.Medium => numberOfTricks + 1,
+        GameDifficulty.Hard => numberOfTricks + 2,
+        _ => throw new ArgumentException("Invalid difficulty")
+      };
+
+      Assert.True(game.Status == GameStatus.BiddingClosed);
+
+      var allCurrentBids = game.PlayerRoundInfo.Select(x => x.Rounds.Last().Bid).ToList();
+      var totalBidCount = allCurrentBids.Sum();
+      Assert.True(totalBidCount >= minBid && totalBidCount <= maxBid);
+      Assert.True(allCurrentBids.All(x => x <= numberOfTricks));
+
+      hasImperfectBid = hasImperfectBid || totalBidCount != numberOfTricks;
+
+      game.MoveToNextPhase();
+    }
+
+    if (difficulty != GameDifficulty.Easy)
+      Assert.True(hasImperfectBid);
   }
 
   private static Random s_rand = new Random();
