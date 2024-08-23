@@ -72,6 +72,7 @@
   min-height: 150px;
   cursor: pointer;
   overflow: hidden;
+  aspect-ratio: 1 / 1;
 
   &::before {
     content: '';
@@ -104,6 +105,40 @@
     position: relative;
     z-index: 2;
     padding: 12px;
+  }
+}
+
+.playerStandingBackground {
+  position: relative;
+  margin: 6px;
+  border-radius: 12px;
+  min-width: 150px;
+  min-height: 150px;
+  aspect-ratio: 1 / 1;
+  cursor: default;
+  overflow: hidden;
+  background-color: #cccccc;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  &.firstPlace {
+    background-image: url('/images/first-place.png');
+  }
+
+  &.secondPlace {
+    background-image: url('/images/second-place.png');
+  }
+
+  &.thirdPlace {
+    background-image: url('/images/third-place.png');
+  }
+
+  .playerStatusContainer {
+    position: relative;
+    z-index: 2;
+    padding: 12px;
+    background-color: #ffffff55;
   }
 }
 

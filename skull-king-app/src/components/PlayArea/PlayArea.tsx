@@ -4,7 +4,10 @@ import {
 } from "react-bootstrap-icons";
 import classNames from "classnames";
 import { Game, GameStatus, Player } from "../../types/game";
-import { PlayerStatusCard } from "../PlayerStatusCard/PlayerStatusCard";
+import {
+  calculateRoundScore,
+  PlayerStatusCard,
+} from "../PlayerStatusCard/PlayerStatusCard";
 
 import "./PlayArea.less";
 import { GameSetBidUri, GameSetScoreUri } from "../../service-paths";
@@ -130,6 +133,23 @@ export const PlayArea = (props: PlayAreaProps) => {
         game.playerRoundInfo.length
     ].player.id;
 
+  const getMyPlace = (game: Game, playerId: string) => {
+    if (game.status !== GameStatus.gameOver) {
+      return undefined;
+    }
+
+    const playerScores = game.playerRoundInfo
+      .map((x) => ({
+        id: x.player.id,
+        score: x.rounds
+          .map((x) => calculateRoundScore(x))
+          .reduce((a, b) => a + b, 0),
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    return playerScores.findIndex((x) => x.id === playerId) + 1;
+  };
+
   // Put the current player at the top of the list so they always
   // know to look for their name. Other players should be in the
   // same order on all devices, but if not, it's OK.
@@ -149,6 +169,7 @@ export const PlayArea = (props: PlayAreaProps) => {
           <div key={index} className="playerStatusCardContainer">
             <PlayerStatusCard
               isMe={x.player.id === me.id}
+              myPlace={getMyPlace(game, x.player.id)}
               playerRounds={x}
               turnPhase={game.status}
               onBidChange={

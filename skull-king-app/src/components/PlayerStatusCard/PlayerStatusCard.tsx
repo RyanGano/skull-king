@@ -10,6 +10,7 @@ import "./PlayerStatusCard.less";
 export interface PlayerStatusCardProps {
   playerRounds: PlayerRounds;
   isMe: boolean;
+  myPlace?: number;
   dealer?: boolean;
   turnPhase: GameStatus;
   onBidChange?: (newBid: number) => void;
@@ -17,8 +18,15 @@ export interface PlayerStatusCardProps {
 }
 
 export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
-  const { playerRounds, isMe, dealer, onBidChange, onScoreChange, turnPhase } =
-    props;
+  const {
+    playerRounds,
+    isMe,
+    dealer,
+    onBidChange,
+    onScoreChange,
+    turnPhase,
+    myPlace,
+  } = props;
   const [showBidUI, setShowBidUI] = useState<boolean>(false);
   const [showScoreUI, setShowScoreUI] = useState<boolean>(false);
   const [currentBonus, setCurrentBonus] = useState<number>(0);
@@ -173,10 +181,18 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
         show={showScoreUI}
       />
       <div
-        className={classNames("playerStatusBackground", {
-          ["disabled"]: !isMe,
-          ["dealer"]: dealer,
-        })}
+        className={classNames(
+          turnPhase !== GameStatus.gameOver
+            ? "playerStatusBackground"
+            : "playerStandingBackground",
+          {
+            ["disabled"]: !isMe,
+            ["dealer"]: dealer,
+            ["firstPlace"]: myPlace === 1,
+            ["secondPlace"]: myPlace === 2,
+            ["thirdPlace"]: myPlace === 3,
+          }
+        )}
       >
         <div
           className={classNames("playerStatusContainer", {
@@ -234,7 +250,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
   );
 };
 
-const calculateRoundScore = (round: Round): number => {
+export const calculateRoundScore = (round: Round): number => {
   // If the round hasn't been scored yet, just return 0;
   if (round.tricksTaken === null) {
     return 0;
