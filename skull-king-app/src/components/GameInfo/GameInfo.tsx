@@ -73,15 +73,14 @@ export const GameInfo = (props: GameInfoProps) => {
     return (
       <Stack>
         <span>
-          A "Random Bid Game" is a game where the score keeper picks a bid for
-          each player. It is then each player's goal to match the bid no matter
-          what cards they have. This will typically be a much faster version of
-          the game because you're not focusing on what to bid, but how to get
-          your bid. It can also be a funny version of the game as a player may
-          find that they are supposed to take six out of seven tricks with all
-          low cards. (note: If you're playing with only two players, a third
-          "Ghost Player" will be added for you. There is no need to update the
-          score for this player.)
+          Random Bid Game: A game where the site picks a bid for each player. It
+          is then each player's goal to match the bid with the cards they have.
+          This will likely be a faster version of the game because you're not
+          focusing on what to bid, but how to get your bid. It can also be a
+          funny version of the game as a player may find that they are supposed
+          to take six out of seven tricks with only low cards. If you're playing
+          with only two players, a third "Ghost Player" will be added for you.
+          Don't worry about updating the score for this player.
         </span>
         <p>Choose your difficulty</p>
         <div className="wrappingContainer">{buttons}</div>
