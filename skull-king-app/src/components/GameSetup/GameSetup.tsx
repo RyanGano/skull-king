@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { SimpleModal } from "../../common/simple-modal";
-import { Stack } from "react-bootstrap";
+import { NavLink, Stack } from "react-bootstrap";
 import { TextInputArea } from "../../common/input-area/text-input-area";
 
 import "./GameSetup.less";
@@ -78,64 +78,78 @@ export const GameSetup = (props: GameSetupProps) => {
   };
 
   return (
-    <Stack gap={2}>
-      {showCreateGameUI && (
-        <SimpleModal
-          title={"New Game"}
-          content={getCreateGameUI()}
-          defaultButtonContent={"Start"}
-          onAccept={() => {
-            createGame?.(playerName!);
-            setShowCreateGameUI(false);
-          }}
-          onCancel={() => setShowCreateGameUI(false)}
-          allowAccept={!!playerName}
-          show={true}
-          centered={false}
-          fullScreen={false}
-        />
-      )}
-      {showJoinGameUI && (
-        <SimpleModal
-          title={"Join Game"}
-          content={getJoinGameUI()}
-          defaultButtonContent={"Join"}
-          onAccept={() => {
-            joinGame?.(gameId!, playerName!);
-            setShowJoinGameUI(false);
-          }}
-          onCancel={() => setShowJoinGameUI(false)}
-          allowAccept={!!playerName && gameId?.length === 4}
-          show={true}
-          centered={false}
-          fullScreen={false}
-        />
-      )}
-      {createGame && joinGame && (
-        <div className="gameSetupContainer">
-          <div className="imageContainer">
-            <img
-              src="/images/banner.png"
-              alt="Start or join a battle!"
-              className="bannerImage"
-            />
-            <div className="buttonsContainer">
-              {
-                <div
-                  className="gameButton"
-                  onClick={() => setShowCreateGameUI(true)}
-                ></div>
-              }
-              {
-                <div
-                  className="gameButton"
-                  onClick={() => setShowJoinGameUI(true)}
-                ></div>
-              }
+    <>
+      <Stack gap={2}>
+        {showCreateGameUI && (
+          <SimpleModal
+            title={"New Game"}
+            content={getCreateGameUI()}
+            defaultButtonContent={"Start"}
+            onAccept={() => {
+              createGame?.(playerName!);
+              setShowCreateGameUI(false);
+            }}
+            onCancel={() => setShowCreateGameUI(false)}
+            allowAccept={!!playerName}
+            show={true}
+            centered={false}
+            fullScreen={false}
+          />
+        )}
+        {showJoinGameUI && (
+          <SimpleModal
+            title={"Join Game"}
+            content={getJoinGameUI()}
+            defaultButtonContent={"Join"}
+            onAccept={() => {
+              joinGame?.(gameId!, playerName!);
+              setShowJoinGameUI(false);
+            }}
+            onCancel={() => setShowJoinGameUI(false)}
+            allowAccept={!!playerName && gameId?.length === 4}
+            show={true}
+            centered={false}
+            fullScreen={false}
+          />
+        )}
+        {createGame && joinGame && (
+          <div className="gameSetupContainer">
+            <div className="imageContainer">
+              <img
+                src="/images/banner.png"
+                alt="Start or join a battle!"
+                className="bannerImage"
+              />
+              <div className="buttonsContainer">
+                {
+                  <div
+                    className="gameButton"
+                    onClick={() => setShowCreateGameUI(true)}
+                  ></div>
+                }
+                {
+                  <div
+                    className="gameButton"
+                    onClick={() => setShowJoinGameUI(true)}
+                  ></div>
+                }
+              </div>
             </div>
           </div>
+        )}
+      </Stack>
+      <div className="gameFooter">
+        <span style={{ marginRight: 4 }}>A scoring application for the </span>
+        <div style={{ color: "#4f779f" }}>
+          <NavLink
+            target="_blank"
+            href="https://www.grandpabecksgames.com/pages/skull-king"
+          >
+            Skull King
+          </NavLink>
         </div>
-      )}
-    </Stack>
+        <span style={{ marginLeft: 4 }}>card game.</span>
+      </div>
+    </>
   );
 };
