@@ -191,6 +191,11 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
             ["firstPlace"]: myPlace === 1,
             ["secondPlace"]: myPlace === 2,
             ["thirdPlace"]: myPlace === 3,
+            ["loser01"]: myPlace === 4,
+            ["loser02"]: myPlace === 5,
+            ["loser03"]: myPlace === 6,
+            ["loser04"]: myPlace === 7,
+            ["loser05"]: myPlace === 8,
           }
         )}
       >

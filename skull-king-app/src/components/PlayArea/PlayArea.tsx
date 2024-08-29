@@ -104,7 +104,7 @@ export const PlayArea = (props: PlayAreaProps) => {
         setChangingGame(false);
       }
     },
-    [game, me]
+    [game, getCurrentHash, me]
   );
 
   const gameState =
@@ -147,7 +147,16 @@ export const PlayArea = (props: PlayAreaProps) => {
       }))
       .sort((a, b) => b.score - a.score);
 
-    return playerScores.findIndex((x) => x.id === playerId) + 1;
+    // build a list of the numbers 1, 2, 3, [4 - 8 in random order]
+    const imagePositions = [
+      1,
+      2,
+      3,
+      ...[4, 5, 6, 7, 8].sort(() => Math.random() - 0.5),
+    ];
+
+    const playerPosition = playerScores.findIndex((x) => x.id === playerId);
+    return imagePositions[playerPosition];
   };
 
   // Put the current player at the top of the list so they always
