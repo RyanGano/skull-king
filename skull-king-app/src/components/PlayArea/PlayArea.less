@@ -28,13 +28,22 @@
 }
 
 .gameStatusNavButton {
-  color: @enabledButtonColor;
   width: 36px;
   height: 36px;
   cursor: pointer;
+  background-position: center;
+  background-size: 100%;
+
+  &.next {
+    background-image: url('/images/go-forward.png');
+  }
+
+  &.previous {
+    background-image: url('/images/go-back.png');
+  }
 
   &.disabled {
-    color: @disabledButtonColor;
+    opacity: 0.25;
     cursor: unset;
   }
 

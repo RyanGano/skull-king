@@ -1,7 +1,3 @@
-import {
-  CaretLeftSquareFill,
-  CaretRightSquareFill,
-} from "react-bootstrap-icons";
 import classNames from "classnames";
 import { Game, GameStatus, Player } from "../../types/game";
 import {
@@ -204,8 +200,9 @@ export const PlayArea = (props: PlayAreaProps) => {
         />
       </div>
       <div className="gameStatusContainer">
-        <CaretLeftSquareFill
+        <div
           className={classNames("gameStatusNavButton", {
+            ["previous"]: true,
             ["disabled"]: !(
               game.playerRoundInfo[0].rounds.length > 1 ||
               game.status === GameStatus.biddingClosed
@@ -220,8 +217,9 @@ export const PlayArea = (props: PlayAreaProps) => {
           }
         />
         <span className="gameStatusText">{gameState}</span>
-        <CaretRightSquareFill
+        <div
           className={classNames("gameStatusNavButton", {
+            ["next"]: true,
             ["disabled"]: !(game.status !== GameStatus.gameOver),
             ["hidden"]: !(game.playerRoundInfo[0].player.id === me.id),
           })}
