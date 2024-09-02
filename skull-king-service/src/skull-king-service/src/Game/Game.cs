@@ -199,9 +199,12 @@ public record Game
 
     var remainingTricks = random.Next(minBidTotal, maxBidTotal + 1);
 
-    foreach (var playerRoundInfo in EditablePlayerRoundInfo)
+    // Get the players in random order so the bids are not always in the same order
+    var randomPlayerOrder = EditablePlayerRoundInfo.OrderBy(x => random.Next()).ToList();
+
+    foreach (var playerRoundInfo in randomPlayerOrder)
     {
-      var bid = playerRoundInfo != EditablePlayerRoundInfo.Last()
+      var bid = playerRoundInfo != randomPlayerOrder.Last()
         ? random.Next(0, int.Min(numberOfTricks + 1, remainingTricks + 1))
         : int.Min(numberOfTricks, remainingTricks);
 
