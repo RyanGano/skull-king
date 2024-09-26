@@ -477,6 +477,19 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     Assert.Equal(0, updatedGame.PlayerRoundInfo[1].Rounds[^1].Bonus);
   }
 
+  [Fact]
+  public async Task CannotGetSingleGameIdWhenThereAreMultiples()
+  {
+    var createdGame = await CreateNewGame("Player 1");
+    var gameId = createdGame?.Id;
+
+    var createdGame2 = await CreateNewGame("Player 1a");
+    var gameId2 = createdGame?.Id;
+
+    var response = await _client.GetAsync($"/games/getid");
+    Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+  }
+
   private async Task<GameDto?> CreateNewGame(string playerName)
   {
     var newGameDto = new NewGameDto { PlayerName = playerName };

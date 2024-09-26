@@ -359,6 +359,19 @@ public static class GameRoutes
     })
     .WithName("SetScore")
     .RequireCors(cors);
+
+    app.MapGet("/games/getid", async (HttpContext httpContext, SkullKingDbContext db) =>
+    {
+      if (db.Games.Count() != 1)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
+        return;
+      }
+
+      await httpContext.Response.WriteAsync(db.Games.First().Id);
+    })
+    .WithName("GetSingleGameId")
+    .RequireCors(cors);
   }
 
   private static async Task<Game?> GetFullGame(GameId gameId, SkullKingDbContext db)

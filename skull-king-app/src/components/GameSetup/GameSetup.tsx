@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SimpleModal } from "../../common/simple-modal";
 import { NavLink, Stack } from "react-bootstrap";
 import { TextInputArea } from "../../common/input-area/text-input-area";
 
 import "./GameSetup.less";
+import { callGetRoute } from "../../utils/api-utils";
+import { GameGetSingleGameIdUri } from "../../service-paths";
 
 interface GameSetupProps {
   createGame?: (playerName: string) => void;
@@ -16,6 +18,30 @@ export const GameSetup = (props: GameSetupProps) => {
   const [showJoinGameUI, setShowJoinGameUI] = useState<boolean>(false);
   const [gameId, setGameId] = useState<string>();
   const [playerName, setPlayerName] = useState<string>();
+  const [defaultGameId, setDefaultGameId] = useState<string>();
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const checkForId = useCallback(async () => {
+    const result = await callGetRoute(GameGetSingleGameIdUri());
+    if (result.status === 200) {
+      setDefaultGameId(result.data);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (timerRef?.current) {
+      return;
+    }
+
+    checkForId();
+    timerRef.current = setInterval(() => {
+      checkForId();
+    }, 1000);
+  }, [checkForId]);
 
   const getCreateGameUI = () => {
     return (
@@ -41,12 +67,13 @@ export const GameSetup = (props: GameSetupProps) => {
     return (
       <Stack gap={2}>
         <TextInputArea
-          startingValue={gameId}
+          startingValue={defaultGameId ?? gameId}
           setNewValue={(newValue) => setGameId(newValue)}
           placeholder="Game Id"
           onEnter={
             (gameId?.length ?? 0) === 4 && playerName?.length
               ? () => {
+                  setDefaultGameId(undefined);
                   joinGame?.(gameId!, playerName!);
                   setShowJoinGameUI(false);
                 }

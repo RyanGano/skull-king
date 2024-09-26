@@ -11,6 +11,7 @@ const GameMoveNextPhaseInternal = `${BaseGameUriInternal}/GAME_ID/movenext?playe
 const GameMovePreviousPhaseInternal = `${BaseGameUriInternal}/GAME_ID/moveprevious?playerId=PLAYER_ID&knownHash=KNOWN_HASH`;
 const GameSetBidInternal = `${BaseGameUriInternal}/GAME_ID/setbid?playerId=PLAYER_ID&bid=BID&knownHash=KNOWN_HASH`;
 const GameSetScoreInternal = `${BaseGameUriInternal}/GAME_ID/setscore?playerId=PLAYER_ID&trickstaken=TRICKS_TAKEN&bonus=BONUS&knownHash=KNOWN_HASH`;
+const GameGetSingleGameIdInternal = `${BaseGameUriInternal}/getid`;
 
 const CurrentBaseUri = import.meta.env.VITE_REACT_APP_BASE_SERVICE_URI;
 
@@ -124,4 +125,8 @@ export function GameSetScoreUri(
     { key: "BONUS", value: bonus.toString() },
     { key: "KNOWN_HASH", value: currentHash },
   ]);
+}
+
+export function GameGetSingleGameIdUri() {
+  return getUriString(GameGetSingleGameIdInternal);
 }
