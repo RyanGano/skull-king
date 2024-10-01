@@ -19,6 +19,7 @@ import { GameSetup } from "./components/GameSetup";
 import { useCookies } from "react-cookie";
 import { SimpleModal } from "./common/simple-modal";
 import classNames from "classnames";
+import { NavLink } from "react-bootstrap";
 
 const App = () => {
   const [game, setGame] = useState<Game | null>(null);
@@ -311,14 +312,17 @@ const App = () => {
           joinGame={!game ? joinGame : undefined}
         />
         {game && game?.status !== GameStatus.acceptingPlayers && (
-          <PlayArea
-            game={game}
-            me={me!}
-            moveToNextGameStatus={moveToNextGameStatus}
-            moveToPreviousGameStatus={moveToPreviousGameStatus}
-            gameChanging={gameChanging}
-            getCurrentHash={() => getCurrentHash(game.id)}
-          />
+          <div>
+            <PlayArea
+              game={game}
+              me={me!}
+              moveToNextGameStatus={moveToNextGameStatus}
+              moveToPreviousGameStatus={moveToPreviousGameStatus}
+              gameChanging={gameChanging}
+              getCurrentHash={() => getCurrentHash(game.id)}
+            />
+            <div style={{ height: 75 }} />
+          </div>
         )}
         {game && game.status === GameStatus.acceptingPlayers && (
           <img
@@ -335,9 +339,20 @@ const App = () => {
           onClick={() => setShowExitPopup(true)}
         />
       )}
+      <div className="gameFooter">
+        <span style={{ marginRight: 4 }}>A scoring application for the </span>
+        <div style={{ color: "#4f779f" }}>
+          <NavLink
+            target="_blank"
+            href="https://www.grandpabecksgames.com/pages/skull-king"
+          >
+            Skull King
+          </NavLink>
+        </div>
+        <span style={{ marginLeft: 4 }}>card game.</span>
+      </div>
     </div>
   );
 };
 
 export default App;
-

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SimpleModal } from "../../common/simple-modal";
-import { NavLink, Stack } from "react-bootstrap";
+import { Stack } from "react-bootstrap";
 import { TextInputArea } from "../../common/input-area/text-input-area";
 
 import "./GameSetup.less";
@@ -165,18 +165,6 @@ export const GameSetup = (props: GameSetupProps) => {
           </div>
         )}
       </Stack>
-      <div className="gameFooter">
-        <span style={{ marginRight: 4 }}>A scoring application for the </span>
-        <div style={{ color: "#4f779f" }}>
-          <NavLink
-            target="_blank"
-            href="https://www.grandpabecksgames.com/pages/skull-king"
-          >
-            Skull King
-          </NavLink>
-        </div>
-        <span style={{ marginLeft: 4 }}>card game.</span>
-      </div>
     </>
   );
 };
