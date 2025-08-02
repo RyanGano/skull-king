@@ -179,6 +179,15 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
           </Dropdown.Menu>
         </Dropdown>
         
+        <div className="bonusSummaryDisplay">
+          {selectedBonuses.length > 0 
+            ? `Selected Bonuses (${currentBonus})` 
+            : allowBonus 
+              ? "No Bonus" 
+              : "Bid not met"
+          }
+        </div>
+        
         <div className="selectedBonusesDisplay">
           {selectedBonuses.length > 0 ? (
             <div className="bonusListContainer">
@@ -202,14 +211,6 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
               })}
             </div>
           ) : null}
-          <div className="bonusSummaryDisplay">
-            {selectedBonuses.length > 0 
-              ? `Selected Bonuses (${currentBonus})` 
-              : allowBonus 
-                ? "No Bonus" 
-                : "Bid not met"
-            }
-          </div>
         </div>
       </div>
     );
