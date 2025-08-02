@@ -206,6 +206,71 @@
     }
   }
 
+  .bonusDropdownToggle {
+    width: 100%;
+    border-radius: 12px;
+    border: 2px solid @enabledButtonColor;
+    background-color: rgba(221, 221, 255, 0.1);
+    color: inherit;
+    font-family: inherit;
+    font-weight: 600;
+    
+    &:disabled {
+      border-color: @disabledButtonColor;
+      background-color: rgba(204, 204, 204, 0.1);
+      color: @disabledButtonColor;
+    }
+    
+    &:focus,
+    &:active,
+    &.show {
+      border-color: @activePlayerColor !important;
+      box-shadow: 0 0 0 0.2rem rgba(136, 136, 221, 0.25) !important;
+      background-color: rgba(221, 221, 255, 0.2) !important;
+      color: inherit !important;
+    }
+    
+    &:hover:not(:disabled) {
+      background-color: rgba(221, 221, 255, 0.15);
+      border-color: @activePlayerColor;
+    }
+  }
+
+  .bonusDropdownMenu {
+    border-radius: 12px;
+    border: 2px solid @enabledButtonColor;
+    background-color: rgba(221, 221, 255, 0.95);
+    backdrop-filter: blur(4px);
+    max-height: 300px;
+    overflow-y: auto;
+    
+    .bonusDropdownItem {
+      color: inherit;
+      font-weight: 600;
+      padding: 8px 12px;
+      
+      &:hover:not(:disabled) {
+        background-color: rgba(136, 136, 221, 0.2);
+        color: inherit;
+      }
+      
+      &:disabled {
+        color: @disabledButtonColor;
+      }
+    }
+    
+    .bonusDropdownCloseItem {
+      color: @activePlayerColor;
+      font-weight: bold;
+      border-top: 1px solid rgba(136, 136, 221, 0.3);
+      
+      &:hover {
+        background-color: rgba(136, 136, 221, 0.2);
+        color: @activePlayerColor;
+      }
+    }
+  }
+
   .selectedBonusesDisplay {
     width: 100%;
 

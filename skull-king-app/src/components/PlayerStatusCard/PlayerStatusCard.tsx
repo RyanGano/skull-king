@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import classNames from "classnames";
 import { SimpleModal } from "../../common/simple-modal";
 import { GameStatus, PlayerRounds, Round } from "../../types/game";
-import Form from "react-bootstrap/Form";
+import Dropdown from "react-bootstrap/Dropdown";
 import { calculateRoundScore } from "./utils";
 
 import "./PlayerStatusCard.less";
@@ -55,6 +55,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
   const [currentBonus, setCurrentBonus] = useState<number>(0);
   const [currentTricksTaken, setCurrentTricksTaken] = useState<number>(0);
   const [selectedBonuses, setSelectedBonuses] = useState<string[]>([]);
+  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
 
   useEffect(() => {
     setCurrentBonus(0);
@@ -114,42 +115,69 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
       currentRound?.bid === currentTricksTaken ||
       currentRound?.bid === currentRound.tricksTaken;
 
-    const handleBonusChange = (optionId: string, checked: boolean) => {
+    const handleBonusSelect = (optionId: string) => {
       if (!allowBonus) return;
       
-      if (checked) {
+      if (!selectedBonuses.includes(optionId)) {
         setSelectedBonuses(prev => [...prev, optionId]);
-      } else {
-        setSelectedBonuses(prev => prev.filter(id => id !== optionId));
       }
+      // Don't close the dropdown - let it stay open
     };
+
+    const handleBonusRemove = (optionId: string) => {
+      if (!allowBonus) return;
+      setSelectedBonuses(prev => prev.filter(id => id !== optionId));
+    };
+
+    const availableOptions = BONUS_OPTIONS.filter(option => !selectedBonuses.includes(option.id));
 
     return (
       <div className="bonusSelectionContainer">
-        <Form.Select 
-          disabled={!allowBonus}
-          value=""
-          onChange={(e) => {
-            if (e.target.value && allowBonus) {
-              const optionId = e.target.value;
-              if (!selectedBonuses.includes(optionId)) {
-                setSelectedBonuses(prev => [...prev, optionId]);
-              }
-            }
-          }}
-          className="bonusDropdown"
+        <Dropdown 
+          show={dropdownOpen && allowBonus}
+          onToggle={(isOpen) => setDropdownOpen(isOpen)}
         >
-          <option value="">Select bonus…</option>
-          {BONUS_OPTIONS.map((option) => (
-            <option 
-              key={option.id} 
-              value={option.id}
-              disabled={selectedBonuses.includes(option.id)}
+          <Dropdown.Toggle 
+            variant="outline-primary" 
+            className="bonusDropdownToggle"
+            disabled={!allowBonus}
+          >
+            Select bonus…
+          </Dropdown.Toggle>
+          
+          <Dropdown.Menu className="bonusDropdownMenu">
+            {availableOptions.length > 0 ? (
+              availableOptions.map((option) => (
+                <Dropdown.Item
+                  key={option.id}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleBonusSelect(option.id);
+                  }}
+                  className="bonusDropdownItem"
+                >
+                  {option.label} (+{option.points})
+                </Dropdown.Item>
+              ))
+            ) : (
+              <Dropdown.Item disabled className="bonusDropdownItem">
+                All bonuses selected
+              </Dropdown.Item>
+            )}
+            <Dropdown.Divider />
+            <Dropdown.Item
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDropdownOpen(false);
+              }}
+              className="bonusDropdownCloseItem"
             >
-              {option.label} ({option.points} pts)
-            </option>
-          ))}
-        </Form.Select>
+              Close
+            </Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
         
         <div className="selectedBonusesDisplay">
           {selectedBonuses.length > 0 ? (
@@ -164,7 +192,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
                       <button
                         type="button"
                         className="removeBonusButton"
-                        onClick={() => handleBonusChange(bonusId, false)}
+                        onClick={() => handleBonusRemove(bonusId)}
                         title="Remove bonus"
                       >
                         ×
@@ -206,6 +234,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
             if (i !== currentRound.bid) {
               setCurrentBonus(0);
               setSelectedBonuses([]);
+              setDropdownOpen(false);
             }
           }}
         >
