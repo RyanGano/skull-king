@@ -182,7 +182,6 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
         <div className="selectedBonusesDisplay">
           {selectedBonuses.length > 0 ? (
             <div className="bonusListContainer">
-              <div className="bonusHeader">Selected Bonuses:</div>
               {selectedBonuses.map((bonusId, index) => {
                 const option = BONUS_OPTIONS.find(opt => opt.id === bonusId);
                 return (
@@ -201,15 +200,16 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
                   </div>
                 );
               })}
-              <div className="bonusTotalDisplay">
-                Total Bonus: {currentBonus} points
-              </div>
             </div>
-          ) : (
-            <div className="noBonusDisplay">
-              {allowBonus ? "No bonuses selected" : "No bonus available (bid not met)"}
-            </div>
-          )}
+          ) : null}
+          <div className="bonusSummaryDisplay">
+            {selectedBonuses.length > 0 
+              ? `Selected Bonuses (${currentBonus})` 
+              : allowBonus 
+                ? "No Bonus" 
+                : "Bid not met"
+            }
+          </div>
         </div>
       </div>
     );
