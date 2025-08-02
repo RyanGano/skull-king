@@ -180,6 +180,144 @@
   }
 }
 
+.bonusSelectionContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+
+  .bonusDropdown {
+    width: 100%;
+    border-radius: 12px;
+    border: 2px solid @enabledButtonColor;
+    background-color: rgba(221, 221, 255, 0.1);
+    font-family: inherit;
+    font-weight: 600;
+    
+    &:disabled {
+      border-color: @disabledButtonColor;
+      background-color: rgba(204, 204, 204, 0.1);
+      color: @disabledButtonColor;
+    }
+    
+    &:focus {
+      border-color: @activePlayerColor;
+      box-shadow: 0 0 0 0.2rem rgba(136, 136, 221, 0.25);
+    }
+  }
+
+  .bonusDropdownToggle {
+    width: 100%;
+    border-radius: 12px;
+    border: 2px solid @enabledButtonColor;
+    background-color: rgba(221, 221, 255, 0.1);
+    color: inherit;
+    font-family: inherit;
+    font-weight: 600;
+    background: none;
+    border: none;
+    text-align: left;
+    font-size: 1.1em;
+    
+    &:disabled {
+      border-color: @disabledButtonColor;
+      background-color: rgba(204, 204, 204, 0.1);
+      color: @disabledButtonColor;
+    }
+    
+    &:focus,
+    &:active,
+    &.show {
+      border-color: @activePlayerColor !important;
+      box-shadow: 0 0 0 0.2rem rgba(136, 136, 221, 0.25) !important;
+      background-color: rgba(221, 221, 255, 0.2) !important;
+      color: inherit !important;
+    }
+    
+    &:hover:not(:disabled) {
+      background-color: rgba(221, 221, 255, 0.15);
+      border-color: @activePlayerColor;
+    }
+  }
+
+  .bonusDropdownMenu {
+    border-radius: 12px;
+    backdrop-filter: blur(4px);
+    max-height: 300px;
+    width: 100%;
+    overflow-y: scroll;
+
+    .bonusDropdownItem {
+      font-weight: 600;
+      padding: 4px 4px;
+      font-size: 1.5em;
+      
+      &:hover:not(:disabled) {
+        background-color: rgba(136, 136, 221, 0.2);
+        color: inherit;
+      }
+      
+      &:disabled {
+        color: @disabledButtonColor;
+      }
+    }
+    
+    .bonusDropdownCloseItem {
+      font-weight: bold;
+      border-top: 1px solid rgba(136, 136, 221, 0.3);
+      font-size: 1.5em;
+      
+      &:hover {
+        background-color: rgba(136, 136, 221, 0.2);
+        color: @activePlayerColor;
+      }
+    }
+  }
+
+  .selectedBonusesDisplay {
+    width: 100%;
+
+    .bonusListContainer {
+      border: 2px solid @enabledButtonColor;
+      border-radius: 12px;
+      padding: 12px;
+
+      .bonusHeader {
+        font-family: "Jim Nightshade", system-ui;
+        font-weight: 400;
+        font-size: 1.1em;
+        text-align: center;
+      }
+
+      .selectedBonusItem {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 8px;
+        margin: 4px 0;
+        font-weight: 600;
+
+        &:last-child {
+          border-bottom: 1px solid rgba(170, 170, 255, 0.3);
+        }
+
+        .removeBonusButton {
+          background: none;
+          border: none;
+          color: red;
+          font-size: 1.5em;
+          line-height:1em;
+          font-family: inherit;
+          cursor: pointer;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+      }
+    }
+  }
+}
+
 .scoreText {
   font-weight: 600;
 }
