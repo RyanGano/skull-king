@@ -139,7 +139,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
           }}
           className="bonusDropdown"
         >
-          <option value="">Select bonus...</option>
+          <option value="">Select bonus…</option>
           {BONUS_OPTIONS.map((option) => (
             <option 
               key={option.id} 
