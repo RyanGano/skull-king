@@ -138,7 +138,6 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
           onToggle={(isOpen) => setDropdownOpen(isOpen)}
         >
           <Dropdown.Toggle 
-            variant="outline-primary" 
             className="bonusDropdownToggle"
             disabled={!allowBonus}
           >

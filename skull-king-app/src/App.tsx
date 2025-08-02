@@ -311,46 +311,46 @@ const App = () => {
           createGame={!game ? createGame : undefined}
           joinGame={!game ? joinGame : undefined}
         />
-        {game && game?.status !== GameStatus.acceptingPlayers && (
-          <div>
-            <PlayArea
-              game={game}
-              me={me!}
-              moveToNextGameStatus={moveToNextGameStatus}
-              moveToPreviousGameStatus={moveToPreviousGameStatus}
-              gameChanging={gameChanging}
-              getCurrentHash={() => getCurrentHash(game.id)}
+            {game && game?.status !== GameStatus.acceptingPlayers && (
+              <div>
+                <PlayArea
+                  game={game}
+                  me={me!}
+                  moveToNextGameStatus={moveToNextGameStatus}
+                  moveToPreviousGameStatus={moveToPreviousGameStatus}
+                  gameChanging={gameChanging}
+                  getCurrentHash={() => getCurrentHash(game.id)}
+                />
+                <div style={{ height: 75 }} />
+              </div>
+            )}
+            {game && game.status === GameStatus.acceptingPlayers && (
+              <img
+                src="/images/logo.png"
+                alt="Get ready to battle yer priate friends!"
+              />
+            )}
+          </Stack>
+          {game && (
+            <img
+              className={"exitGameButton"}
+              src="/images/skeleton.png"
+              alt="Abandon yer mates."
+              onClick={() => setShowExitPopup(true)}
             />
-            <div style={{ height: 75 }} />
+          )}
+          <div className="gameFooter">
+            <span style={{ marginRight: 4 }}>A scoring application for the </span>
+            <div style={{ color: "#4f779f" }}>
+              <NavLink
+                target="_blank"
+                href="https://www.grandpabecksgames.com/pages/skull-king"
+              >
+                Skull King
+              </NavLink>
+            </div>
+            <span style={{ marginLeft: 4 }}>card game.</span>
           </div>
-        )}
-        {game && game.status === GameStatus.acceptingPlayers && (
-          <img
-            src="/images/logo.png"
-            alt="Get ready to battle yer priate friends!"
-          />
-        )}
-      </Stack>
-      {game && (
-        <img
-          className={"exitGameButton"}
-          src="/images/skeleton.png"
-          alt="Abandon yer mates."
-          onClick={() => setShowExitPopup(true)}
-        />
-      )}
-      <div className="gameFooter">
-        <span style={{ marginRight: 4 }}>A scoring application for the </span>
-        <div style={{ color: "#4f779f" }}>
-          <NavLink
-            target="_blank"
-            href="https://www.grandpabecksgames.com/pages/skull-king"
-          >
-            Skull King
-          </NavLink>
-        </div>
-        <span style={{ marginLeft: 4 }}>card game.</span>
-      </div>
     </div>
   );
 };

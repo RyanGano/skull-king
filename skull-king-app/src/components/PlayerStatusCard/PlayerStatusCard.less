@@ -189,51 +189,39 @@
 
   .bonusDropdown {
     width: 100%;
-    border-radius: 12px;
-    border: 2px solid @enabledButtonColor;
-    background-color: rgba(221, 221, 255, 0.1);
     font-family: inherit;
     font-weight: 600;
     
     &:disabled {
-      border-color: @disabledButtonColor;
-      background-color: rgba(204, 204, 204, 0.1);
       color: @disabledButtonColor;
-    }
-    
-    &:focus {
-      border-color: @activePlayerColor;
-      box-shadow: 0 0 0 0.2rem rgba(136, 136, 221, 0.25);
     }
   }
 
   .bonusDropdownToggle {
     width: 100%;
-    border-radius: 12px;
-    border: 2px solid @enabledButtonColor;
-    background-color: rgba(221, 221, 255, 0.1);
     color: inherit;
     font-family: inherit;
     font-weight: 600;
+    background: none;
+    border: none;
+    text-align: left;
     
     &:disabled {
-      border-color: @disabledButtonColor;
-      background-color: rgba(204, 204, 204, 0.1);
       color: @disabledButtonColor;
     }
     
     &:focus,
     &:active,
     &.show {
-      border-color: @activePlayerColor !important;
-      box-shadow: 0 0 0 0.2rem rgba(136, 136, 221, 0.25) !important;
-      background-color: rgba(221, 221, 255, 0.2) !important;
+      background: none !important;
+      border: none !important;
+      box-shadow: none !important;
       color: inherit !important;
     }
     
     &:hover:not(:disabled) {
-      background-color: rgba(221, 221, 255, 0.15);
-      border-color: @activePlayerColor;
+      background: none;
+      border: none;
     }
   }
 
