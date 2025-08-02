@@ -183,9 +183,7 @@
 .bonusSelectionContainer {
   display: flex;
   flex-direction: column;
-  gap: 10px;
   width: 100%;
-  overflow-y: auto;
 
   .bonusDropdown {
     width: 100%;
@@ -205,6 +203,7 @@
     background: none;
     border: none;
     text-align: left;
+    font-size: 1.1em;
     
     &:disabled {
       color: @disabledButtonColor;
@@ -227,16 +226,14 @@
 
   .bonusDropdownMenu {
     border-radius: 12px;
-    border: 2px solid @enabledButtonColor;
-    background-color: rgba(221, 221, 255, 0.95);
     backdrop-filter: blur(4px);
     max-height: 300px;
-    overflow-y: auto;
+    width: 100%;
     
     .bonusDropdownItem {
-      color: inherit;
       font-weight: 600;
-      padding: 8px 12px;
+      padding: 4px 4px;
+      font-size: 1.5em;
       
       &:hover:not(:disabled) {
         background-color: rgba(136, 136, 221, 0.2);
@@ -249,9 +246,9 @@
     }
     
     .bonusDropdownCloseItem {
-      color: @activePlayerColor;
       font-weight: bold;
       border-top: 1px solid rgba(136, 136, 221, 0.3);
+      font-size: 1.5em;
       
       &:hover {
         background-color: rgba(136, 136, 221, 0.2);
@@ -264,18 +261,14 @@
     width: 100%;
 
     .bonusListContainer {
-      background-color: rgba(221, 221, 255, 0.15);
       border: 2px solid @enabledButtonColor;
       border-radius: 12px;
       padding: 12px;
-      font-size: 0.9em;
 
       .bonusHeader {
         font-family: "Jim Nightshade", system-ui;
         font-weight: 400;
         font-size: 1.1em;
-        margin-bottom: 8px;
-        color: @activePlayerColor;
         text-align: center;
       }
 
@@ -285,9 +278,6 @@
         align-items: center;
         padding: 6px 8px;
         margin: 4px 0;
-        background-color: rgba(255, 255, 255, 0.3);
-        border-radius: 8px;
-        border: 1px solid rgba(170, 170, 255, 0.3);
         font-weight: 600;
 
         &:last-child {
@@ -298,7 +288,8 @@
           background: none;
           border: none;
           color: red;
-          font-size: 18px;
+          font-size: 1.5em;
+          line-height:1em;
           font-family: inherit;
           cursor: pointer;
           padding: 0;
@@ -307,41 +298,6 @@
           justify-content: center;
         }
       }
-
-      .bonusTotalDisplay {
-        margin-top: 12px;
-        padding-top: 12px;
-        border-top: 2px solid @enabledButtonColor;
-        font-family: "Jim Nightshade", system-ui;
-        font-weight: 400;
-        font-size: 1.2em;
-        color: @activePlayerColor;
-        text-align: center;
-        background-color: rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-        padding: 8px;
-      }
-    }
-
-    .noBonusDisplay {
-      background-color: rgba(221, 221, 255, 0.1);
-      border: 2px solid @disabledButtonColor;
-      border-radius: 12px;
-      padding: 12px;
-      text-align: center;
-      color: @disabledButtonColor;
-      font-style: italic;
-      font-size: 0.9em;
-      font-weight: 600;
-    }
-
-    .bonusSummaryDisplay {
-      text-align: center;
-      font-family: "Jim Nightshade", system-ui;
-      font-weight: 400;
-      font-size: 1.1em;
-      color: @activePlayerColor;
-      margin-top: 8px;
     }
   }
 }

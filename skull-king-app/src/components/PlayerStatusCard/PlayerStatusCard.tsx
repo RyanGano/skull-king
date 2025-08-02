@@ -66,7 +66,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
   // Update currentBonus when selectedBonuses changes
   useEffect(() => {
     const totalBonusPoints = selectedBonuses.reduce((total, bonusId) => {
-      const option = BONUS_OPTIONS.find(opt => opt.id === bonusId);
+      const option = BONUS_OPTIONS.find((opt) => opt.id === bonusId);
       return total + (option?.points || 0);
     }, 0);
     setCurrentBonus(totalBonusPoints);
@@ -117,33 +117,35 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
 
     const handleBonusSelect = (optionId: string) => {
       if (!allowBonus) return;
-      
+
       if (!selectedBonuses.includes(optionId)) {
-        setSelectedBonuses(prev => [...prev, optionId]);
+        setSelectedBonuses((prev) => [...prev, optionId]);
       }
       // Don't close the dropdown - let it stay open
     };
 
     const handleBonusRemove = (optionId: string) => {
       if (!allowBonus) return;
-      setSelectedBonuses(prev => prev.filter(id => id !== optionId));
+      setSelectedBonuses((prev) => prev.filter((id) => id !== optionId));
     };
 
-    const availableOptions = BONUS_OPTIONS.filter(option => !selectedBonuses.includes(option.id));
+    const availableOptions = BONUS_OPTIONS.filter(
+      (option) => !selectedBonuses.includes(option.id)
+    );
 
     return (
       <div className="bonusSelectionContainer">
-        <Dropdown 
+        <Dropdown
           show={dropdownOpen && allowBonus}
           onToggle={(isOpen) => setDropdownOpen(isOpen)}
         >
-          <Dropdown.Toggle 
+          <Dropdown.Toggle
             className="bonusDropdownToggle"
             disabled={!allowBonus}
           >
-            Select bonus…
+            Add bonus…
           </Dropdown.Toggle>
-          
+
           <Dropdown.Menu className="bonusDropdownMenu">
             {availableOptions.length > 0 ? (
               availableOptions.map((option) => (
@@ -177,24 +179,20 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
             </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>
-        
-        <div className="bonusSummaryDisplay">
-          {selectedBonuses.length > 0 
-            ? `Selected Bonuses (${currentBonus})` 
-            : allowBonus 
-              ? "No Bonus" 
-              : "Bid not met"
-          }
-        </div>
-        
+
         <div className="selectedBonusesDisplay">
           {selectedBonuses.length > 0 ? (
             <div className="bonusListContainer">
               {selectedBonuses.map((bonusId, index) => {
-                const option = BONUS_OPTIONS.find(opt => opt.id === bonusId);
+                const option = BONUS_OPTIONS.find((opt) => opt.id === bonusId);
                 return (
-                  <div key={`${bonusId}-${index}`} className="selectedBonusItem">
-                    <span>{option?.label} (+{option?.points})</span>
+                  <div
+                    key={`${bonusId}-${index}`}
+                    className="selectedBonusItem"
+                  >
+                    <span>
+                      {option?.label} (+{option?.points})
+                    </span>
                     {allowBonus && (
                       <button
                         type="button"
@@ -243,12 +241,18 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
       );
     }
 
+    const isBonusAvailable = currentTricksTaken == currentRound.bid;
+
     return (
       <Stack>
         <span>Tricks Taken</span>
         <div className="wrappingContainer">{tricksTaken}</div>
-        <span>Bonus Points</span>
-        <div className="wrappingContainer">{getBonusUI()}</div>
+        <span>
+          {isBonusAvailable ? `Bonus Points (${currentBonus})` : "No Bonus"}
+        </span>
+        {isBonusAvailable && (
+          <div className="wrappingContainer">{getBonusUI()}</div>
+        )}
       </Stack>
     );
   };
