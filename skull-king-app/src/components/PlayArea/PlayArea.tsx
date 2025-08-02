@@ -1,9 +1,7 @@
 import classNames from "classnames";
 import { Game, GameStatus, Player } from "../../types/game";
-import {
-  calculateRoundScore,
-  PlayerStatusCard,
-} from "../PlayerStatusCard/PlayerStatusCard";
+import { PlayerStatusCard } from "../PlayerStatusCard/PlayerStatusCard";
+import { calculateRoundScore } from "../PlayerStatusCard/utils";
 
 import "./PlayArea.less";
 import { GameSetBidUri, GameSetScoreUri } from "../../service-paths";

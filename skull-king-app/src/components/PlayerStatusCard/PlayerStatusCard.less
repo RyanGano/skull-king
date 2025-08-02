@@ -180,6 +180,88 @@
   }
 }
 
+.bonusSelectionContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+
+  .bonusDropdown {
+    width: 100%;
+  }
+
+  .selectedBonusesDisplay {
+    width: 100%;
+
+    .bonusListContainer {
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 8px;
+      font-size: 0.9em;
+
+      .bonusHeader {
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #495057;
+      }
+
+      .selectedBonusItem {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 3px 0;
+        border-bottom: 1px solid #e9ecef;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        .removeBonusButton {
+          background: none;
+          border: none;
+          color: #dc3545;
+          font-size: 16px;
+          font-weight: bold;
+          cursor: pointer;
+          padding: 0;
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+
+          &:hover {
+            background-color: #dc3545;
+            color: white;
+          }
+        }
+      }
+
+      .bonusTotalDisplay {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 2px solid #dee2e6;
+        font-weight: 600;
+        color: #007bff;
+        text-align: center;
+      }
+    }
+
+    .noBonusDisplay {
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 10px;
+      text-align: center;
+      color: #6c757d;
+      font-style: italic;
+      font-size: 0.9em;
+    }
+  }
+}
+
 .scoreText {
   font-weight: 600;
 }
