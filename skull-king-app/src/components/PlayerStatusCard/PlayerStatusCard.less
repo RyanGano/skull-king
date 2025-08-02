@@ -187,16 +187,29 @@
 
   .bonusDropdown {
     width: 100%;
+    border-radius: 12px;
+    border: 2px solid @enabledButtonColor;
+    background-color: rgba(221, 221, 255, 0.1);
     font-family: inherit;
     font-weight: 600;
     
     &:disabled {
+      border-color: @disabledButtonColor;
+      background-color: rgba(204, 204, 204, 0.1);
       color: @disabledButtonColor;
+    }
+    
+    &:focus {
+      border-color: @activePlayerColor;
+      box-shadow: 0 0 0 0.2rem rgba(136, 136, 221, 0.25);
     }
   }
 
   .bonusDropdownToggle {
     width: 100%;
+    border-radius: 12px;
+    border: 2px solid @enabledButtonColor;
+    background-color: rgba(221, 221, 255, 0.1);
     color: inherit;
     font-family: inherit;
     font-weight: 600;
@@ -206,21 +219,23 @@
     font-size: 1.1em;
     
     &:disabled {
+      border-color: @disabledButtonColor;
+      background-color: rgba(204, 204, 204, 0.1);
       color: @disabledButtonColor;
     }
     
     &:focus,
     &:active,
     &.show {
-      background: none !important;
-      border: none !important;
-      box-shadow: none !important;
+      border-color: @activePlayerColor !important;
+      box-shadow: 0 0 0 0.2rem rgba(136, 136, 221, 0.25) !important;
+      background-color: rgba(221, 221, 255, 0.2) !important;
       color: inherit !important;
     }
     
     &:hover:not(:disabled) {
-      background: none;
-      border: none;
+      background-color: rgba(221, 221, 255, 0.15);
+      border-color: @activePlayerColor;
     }
   }
 
@@ -229,7 +244,8 @@
     backdrop-filter: blur(4px);
     max-height: 300px;
     width: 100%;
-    
+    overflow-y: scroll;
+
     .bonusDropdownItem {
       font-weight: 600;
       padding: 4px 4px;
