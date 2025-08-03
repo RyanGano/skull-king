@@ -12,22 +12,32 @@ interface BonusOption {
   id: string;
   label: string;
   points: number;
+  maxCount: number;
 }
 
+// Consolidated dropdown options with maxCount for each
 const BONUS_OPTIONS: BonusOption[] = [
-  { id: "green14", label: "Green 14", points: 10 },
-  { id: "yellow14", label: "Yellow 14", points: 10 },
-  { id: "purple14", label: "Purple 14", points: 10 },
-  { id: "black14", label: "Black 14", points: 20 },
-  { id: "mermaid1", label: "Mermaid captured with a Pirate", points: 20 },
-  { id: "mermaid2", label: "Mermaid captured with a Pirate", points: 20 },
-  { id: "pirate1", label: "Pirate captured with the Skull King", points: 30 },
-  { id: "pirate2", label: "Pirate captured with the Skull King", points: 30 },
-  { id: "pirate3", label: "Pirate captured with the Skull King", points: 30 },
-  { id: "pirate4", label: "Pirate captured with the Skull King", points: 30 },
-  { id: "pirate5", label: "Pirate captured with the Skull King", points: 30 },
-  { id: "pirate6", label: "Pirate captured with the Skull King", points: 30 },
-  { id: "skullking", label: "Skull King captured with a Mermaid", points: 40 },
+  { id: "color14", label: "Yellow/Green/Purple 14", points: 10, maxCount: 3 },
+  { id: "black14", label: "Black 14", points: 10, maxCount: 1 },
+  {
+    id: "mermaid",
+    label: "Mermaid captured with a Pirate",
+    points: 20,
+    maxCount: 2,
+  },
+  {
+    id: "pirate",
+    label: "Pirate captured with the Skull King",
+    points: 30,
+    maxCount: 6,
+  },
+  {
+    id: "skullking",
+    label: "Skull King captured with a Mermaid",
+    points: 40,
+    maxCount: 1,
+  },
+  { id: "goldcoins", label: "Gold Coins", points: 20, maxCount: 2 },
 ];
 
 export interface PlayerStatusCardProps {
@@ -54,6 +64,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
   const [showScoreUI, setShowScoreUI] = useState<boolean>(false);
   const [currentBonus, setCurrentBonus] = useState<number>(0);
   const [currentTricksTaken, setCurrentTricksTaken] = useState<number>(0);
+  // selectedBonuses: array of bonus ids (can have duplicates)
   const [selectedBonuses, setSelectedBonuses] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
 
@@ -115,23 +126,29 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
       currentRound?.bid === currentTricksTaken ||
       currentRound?.bid === currentRound.tricksTaken;
 
+    // Count how many times each bonus id is selected
+    const bonusCounts: Record<string, number> = {};
+    selectedBonuses.forEach((id) => {
+      bonusCounts[id] = (bonusCounts[id] || 0) + 1;
+    });
+
+    // Only show options in dropdown if not at maxCount
+    const availableOptions = BONUS_OPTIONS.filter(
+      (option) => (bonusCounts[option.id] || 0) < option.maxCount
+    );
+
     const handleBonusSelect = (optionId: string) => {
       if (!allowBonus) return;
-
-      if (!selectedBonuses.includes(optionId)) {
-        setSelectedBonuses((prev) => [...prev, optionId]);
-      }
-      // Don't close the dropdown - let it stay open
+      setSelectedBonuses((prev) => [...prev, optionId]);
+      setDropdownOpen(false); // close after each selection
     };
 
-    const handleBonusRemove = (optionId: string) => {
+    const handleBonusRemove = (indexToRemove: number) => {
       if (!allowBonus) return;
-      setSelectedBonuses((prev) => prev.filter((id) => id !== optionId));
+      setSelectedBonuses((prev) =>
+        prev.filter((_, idx) => idx !== indexToRemove)
+      );
     };
-
-    const availableOptions = BONUS_OPTIONS.filter(
-      (option) => !selectedBonuses.includes(option.id)
-    );
 
     return (
       <div className="bonusSelectionContainer">
@@ -197,7 +214,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
                       <button
                         type="button"
                         className="removeBonusButton"
-                        onClick={() => handleBonusRemove(bonusId)}
+                        onClick={() => handleBonusRemove(index)}
                         title="Remove bonus"
                       >
                         ×
