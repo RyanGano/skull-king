@@ -20,6 +20,7 @@ import { useCookies } from "react-cookie";
 import { SimpleModal } from "./common/simple-modal";
 import classNames from "classnames";
 import { NavLink } from "react-bootstrap";
+import { Button } from "react-bootstrap";
 
 const App = () => {
   const [game, setGame] = useState<Game | null>(null);
@@ -30,6 +31,7 @@ const App = () => {
   const [showExitPopup, setShowExitPopup] = useState(false);
   const [gameChanging, setChangingGame] = useState(false);
   const [hasWarmedUp, setHasWarmedUp] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
 
   useEffect(() => {
     if (hasWarmedUp) {
@@ -310,47 +312,84 @@ const App = () => {
         <GameSetup
           createGame={!game ? createGame : undefined}
           joinGame={!game ? joinGame : undefined}
+          onSetupModalChanged={(open: boolean) => setSetupOpen(open)}
         />
-            {game && game?.status !== GameStatus.acceptingPlayers && (
-              <div>
-                <PlayArea
-                  game={game}
-                  me={me!}
-                  moveToNextGameStatus={moveToNextGameStatus}
-                  moveToPreviousGameStatus={moveToPreviousGameStatus}
-                  gameChanging={gameChanging}
-                  getCurrentHash={() => getCurrentHash(game.id)}
-                />
-                <div style={{ height: 75 }} />
-              </div>
-            )}
-            {game && game.status === GameStatus.acceptingPlayers && (
-              <img
-                src="/images/logo.png"
-                alt="Get ready to battle yer priate friends!"
-              />
-            )}
-          </Stack>
-          {game && (
-            <img
-              className={"exitGameButton"}
-              src="/images/skeleton.png"
-              alt="Abandon yer mates."
-              onClick={() => setShowExitPopup(true)}
+        {game && game?.status !== GameStatus.acceptingPlayers && (
+          <div>
+            <PlayArea
+              game={game}
+              me={me!}
+              moveToNextGameStatus={moveToNextGameStatus}
+              moveToPreviousGameStatus={moveToPreviousGameStatus}
+              gameChanging={gameChanging}
+              getCurrentHash={() => getCurrentHash(game.id)}
             />
-          )}
-          <div className="gameFooter">
-            <span style={{ marginRight: 4 }}>A scoring application for the </span>
-            <div style={{ color: "#4f779f" }}>
-              <NavLink
-                target="_blank"
-                href="https://www.grandpabecksgames.com/pages/skull-king"
-              >
-                Skull King
-              </NavLink>
-            </div>
-            <span style={{ marginLeft: 4 }}>card game.</span>
+            <div style={{ height: 75 }} />
           </div>
+        )}
+        {game && game.status === GameStatus.acceptingPlayers && (
+          <img
+            src="/images/logo.png"
+            alt="Get ready to battle yer priate friends!"
+          />
+        )}
+      </Stack>
+      {game && (
+        <img
+          className={"exitGameButton"}
+          src="/images/skeleton.png"
+          alt="Abandon yer mates."
+          onClick={() => setShowExitPopup(true)}
+        />
+      )}
+      {/* Share button positioned above footer (fixed) - show when not in setup and game is not in progress */}
+      {!setupOpen &&
+        (!game ||
+          game?.status === GameStatus.acceptingPlayers ||
+          game?.status === GameStatus.gameOver) && (
+          <Button
+            className="shareFloating pirateShare"
+            variant="outline-primary"
+            size="sm"
+            onClick={() => {
+              const origin = window?.location?.origin ?? "https://skullk.ing";
+              const url =
+                game && game?.status === GameStatus.acceptingPlayers
+                  ? `${origin}/${game.id}`
+                  : origin + "/";
+
+              const nav = navigator as Navigator & {
+                share?: (data: ShareData) => Promise<void>;
+              };
+              if (nav.share) {
+                nav
+                  .share({ title: "Skull King", url })
+                  .catch(() => navigator.clipboard?.writeText(url));
+              } else if (navigator.clipboard?.writeText) {
+                navigator.clipboard.writeText(url);
+                alert("Share link copied to clipboard: " + url);
+              } else {
+                window.prompt("Copy this link", url);
+              }
+            }}
+          >
+            <img src="/images/map-color.png" alt="map" className="pirateIcon" />
+            Share the Map!
+          </Button>
+        )}
+
+      <div className="gameFooter">
+        <span style={{ marginRight: 4 }}>A scoring application for the </span>
+        <div style={{ color: "#4f779f" }}>
+          <NavLink
+            target="_blank"
+            href="https://www.grandpabecksgames.com/pages/skull-king"
+          >
+            Skull King
+          </NavLink>
+        </div>
+        <span style={{ marginLeft: 4 }}>card game.</span>
+      </div>
     </div>
   );
 };
