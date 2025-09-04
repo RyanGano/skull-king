@@ -6,6 +6,7 @@ import { TextInputArea } from "../../common/input-area/text-input-area";
 import "./GameSetup.less";
 import { callGetRoute } from "../../utils/api-utils";
 import { GameGetSingleGameIdUri, GetGameUri } from "../../service-paths";
+import { GameStatus } from "../../types/game";
 
 interface GameSetupProps {
   createGame?: (playerName: string) => void;
@@ -85,7 +86,7 @@ export const GameSetup = (props: GameSetupProps) => {
           const result = await callGetRoute(GetGameUri(defaultGameId));
           if (result.status === 200) {
             const gameData = result.data;
-            if (gameData.status === "acceptingPlayers") {
+            if (gameData.status === GameStatus.acceptingPlayers) {
               // Game exists and can be joined
               setGameId(defaultGameId);
               setShowJoinGameUI(true);

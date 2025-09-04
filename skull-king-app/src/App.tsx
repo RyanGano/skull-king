@@ -2,7 +2,12 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import Stack from "react-bootstrap/esm/Stack";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { callGetRoute, callPostRoute, callPutRoute } from "./utils/api-utils";
+import {
+  callGetRoute,
+  callPostRoute,
+  callPutRoute,
+  callDeleteRoute,
+} from "./utils/api-utils";
 import {
   AddPlayerUri,
   CreateNewGameUri,
@@ -11,6 +16,7 @@ import {
   GameMovePreviousPhaseUri,
   GetGameUri,
   GetWarmupUri,
+  RemovePlayerUri,
   StartGameUri,
 } from "./service-paths";
 import { Game, GameDifficulty, GameStatus, Player } from "./types/game";
@@ -36,6 +42,7 @@ const App = () => {
   const [gameChanging, setChangingGame] = useState(false);
   const [hasWarmedUp, setHasWarmedUp] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
+  const [showGameEndedMessage, setShowGameEndedMessage] = useState(false);
 
   useEffect(() => {
     if (hasWarmedUp) {
@@ -57,20 +64,84 @@ const App = () => {
     currentHashRef.current = game?.hash;
   }, [game?.hash]);
 
-  const updateGame = useCallback(async (id: string, currentHash: string) => {
-    const currentGame = await callGetRoute(GetGameUri(id, currentHash));
-    if (currentGame.status !== 304) {
-      setGame(currentGame.data);
-    }
-  }, []);
+  const updateGame = useCallback(
+    async (id: string, currentHash: string) => {
+      const currentGame = await callGetRoute(GetGameUri(id, currentHash));
+      if (currentGame.status === 404) {
+        // Game not found, probably deleted because everyone left
+        setGame(null);
+        setMe(undefined);
+        clearInterval(timerRef.current!);
+        timerRef.current = null;
+        currentHashRef.current = undefined;
+        setShowGameEndedMessage(true);
+        // Show message for 3 seconds then redirect
+        setTimeout(() => {
+          setShowGameEndedMessage(false);
+          navigate("/");
+        }, 3000);
+        return;
+      }
+      if (currentGame.status !== 304) {
+        const gameData = currentGame.data as Game;
+        if (
+          me &&
+          !gameData.playerRoundInfo.some((pri) => pri.player?.id === me.id)
+        ) {
+          // Player no longer in the game
+          setGame(null);
+          setMe(undefined);
+          clearInterval(timerRef.current!);
+          timerRef.current = null;
+          currentHashRef.current = undefined;
+          navigate("/");
+          return;
+        }
+        setGame(gameData);
+      }
+    },
+    [me, navigate]
+  );
 
-  const getCurrentHash = useCallback(async (id: string) => {
-    const currentGame = await callGetRoute(GetGameUri(id));
-    if (currentGame.status !== 304) {
-      setGame(currentGame.data);
-      return currentGame.data.hash;
-    }
-  }, []);
+  const getCurrentHash = useCallback(
+    async (id: string) => {
+      const currentGame = await callGetRoute(GetGameUri(id));
+      if (currentGame.status === 404) {
+        // Game not found, probably deleted because everyone left
+        setGame(null);
+        setMe(undefined);
+        clearInterval(timerRef.current!);
+        timerRef.current = null;
+        currentHashRef.current = undefined;
+        setShowGameEndedMessage(true);
+        // Show message for 3 seconds then redirect
+        setTimeout(() => {
+          setShowGameEndedMessage(false);
+          navigate("/");
+        }, 3000);
+        return;
+      }
+      if (currentGame.status !== 304) {
+        const gameData = currentGame.data as Game;
+        if (
+          me &&
+          !gameData.playerRoundInfo.some((pri) => pri.player?.id === me.id)
+        ) {
+          // Player no longer in the game
+          setGame(null);
+          setMe(undefined);
+          clearInterval(timerRef.current!);
+          timerRef.current = null;
+          currentHashRef.current = undefined;
+          navigate("/");
+          return;
+        }
+        setGame(currentGame.data);
+        return currentGame.data.hash;
+      }
+    },
+    [me, navigate]
+  );
 
   const startUpdateTimer = useCallback(
     (id: string) => {
@@ -128,7 +199,7 @@ const App = () => {
 
   const createGame = useCallback(
     async (playerName: string) => {
-      const personDto = { playerName: playerName };
+      const personDto = { PlayerName: playerName };
 
       const result = await callPostRoute(
         CreateNewGameUri(),
@@ -142,6 +213,7 @@ const App = () => {
         const player = gameData.playerRoundInfo[0].player;
         setGame(gameData);
         setMe(player);
+        setSetupOpen(false);
         // Navigate to the game URL with player ID
         navigate(`/${gameData.id}/${player!.id}`);
       }
@@ -166,6 +238,7 @@ const App = () => {
       } else {
         const player = result.data;
         setMe(player);
+        setSetupOpen(false);
         // Navigate to the game URL with player ID
         navigate(`/${gameId}/${player.id}`);
       }
@@ -276,7 +349,18 @@ const App = () => {
     [game, getCurrentHash, me, updateGame]
   );
 
-  const exitGame = useCallback(() => {
+  const exitGame = useCallback(async () => {
+    if (game && me) {
+      // Call the backend to remove the player
+      const result = await callDeleteRoute(
+        RemovePlayerUri(game.id, me.id, currentHashRef.current ?? "")
+      );
+      if (result.status === 200 || result.status === 404) {
+        // Successfully removed or game/player not found
+      } else {
+        console.log("Error leaving game", result.status, result.statusText);
+      }
+    }
     // Clear the game state and navigate to home
     setGame(null);
     setMe(undefined);
@@ -285,7 +369,7 @@ const App = () => {
     currentHashRef.current = undefined;
     setShowExitPopup(false);
     navigate("/");
-  }, [navigate]);
+  }, [game, me, navigate]);
 
   return (
     <div className={classNames("App", "pirateFont")}>
@@ -388,6 +472,46 @@ const App = () => {
             Share the Map!
           </Button>
         )}
+
+      {/* Game Ended Message */}
+      <SimpleModal
+        title={"Arrr! The Crew Abandoned Ship!"}
+        content={
+          <>
+            <p
+              style={{
+                fontSize: "1.2rem",
+                color: "#8B4513",
+                textAlign: "center",
+              }}
+            >
+              All yer mates have left the game, ye scurvy dogs!
+            </p>
+            <p
+              style={{
+                fontSize: "1rem",
+                color: "#654321",
+                textAlign: "center",
+                marginTop: "1rem",
+              }}
+            >
+              The game has been disbanded. Find a new crew to sail with!
+            </p>
+          </>
+        }
+        defaultButtonContent={"Back to Port"}
+        onAccept={() => {
+          setShowGameEndedMessage(false);
+          navigate("/");
+        }}
+        onCancel={() => {
+          setShowGameEndedMessage(false);
+          navigate("/");
+        }}
+        show={showGameEndedMessage}
+        centered={true}
+        fullScreen={false}
+      />
 
       <div className="gameFooter">
         <span style={{ marginRight: 4 }}>A scoring application for the </span>

@@ -96,6 +96,76 @@ public static class GameRoutes
     .WithName("AddPlayerToGame")
     .RequireCors(cors);
 
+    app.MapDelete("/games/{id}/players/{playerId}", async (GameId id, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    {
+      // Check the knownHash compared to current stored hash
+      // Do not allow updates if the user's hash doesn't match the current hash
+      var currentHash = db.Hashes.Find(id.Value);
+      if (currentHash?.Value != knownHash)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status412PreconditionFailed;
+        return;
+      }
+
+      var game = await GetFullGame(id, db);
+      if (game is null)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+      }
+
+      var playerToRemove = game.PlayerRoundInfo.FirstOrDefault(pri => pri.Player!.Id == playerId)?.Player;
+      if (playerToRemove is null)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+      }
+
+      try
+      {
+        var playerRoundToRemove = game.PlayerRoundInfo.First(pri => pri.Player!.Id == playerId);
+        game.RemovePlayer(playerToRemove);
+
+        if (game.PlayerRoundInfo.Count < 2 && game.Status != GameStatus.AcceptingPlayers)
+        {
+          // Delete the game and all related entities only if game is in progress or completed
+          foreach (var playerRound in game.PlayerRoundInfo)
+          {
+            db.Rounds.RemoveRange(playerRound.Rounds!);
+            db.PlayerRoundInfos.Remove(playerRound);
+            db.Players.Remove(playerRound.Player!);
+          }
+          // Also remove the removed player's entities
+          db.Rounds.RemoveRange(playerRoundToRemove.Rounds!);
+          db.PlayerRoundInfos.Remove(playerRoundToRemove);
+          db.Players.Remove(playerToRemove);
+          db.Games.Remove(game);
+          if (currentHash is not null)
+          {
+            db.Hashes.Remove(currentHash);
+          }
+        }
+        else
+        {
+          // Remove the player and their rounds, but keep the game if it's still accepting players
+          db.Rounds.RemoveRange(playerRoundToRemove.Rounds!);
+          db.PlayerRoundInfos.Remove(playerRoundToRemove);
+          db.Players.Remove(playerToRemove);
+
+          db.Games.Update(game);
+          await UpdateHashAndSaveAsync(db, game);
+        }
+
+        await db.SaveChangesAsync();
+      }
+      catch (ArgumentException)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+      }
+    })
+    .WithName("RemovePlayerFromGame")
+    .RequireCors(cors);
+
     app.MapGet("/games/{id}/start", async (GameId id, Guid playerId, string knownHash, bool? randomBidMode, GameDifficulty? gameDifficulty, HttpContext httpContext, SkullKingDbContext db) =>
     {
       // Check the knownHash compared to current stored hash
