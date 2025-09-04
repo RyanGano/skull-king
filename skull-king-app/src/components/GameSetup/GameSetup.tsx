@@ -10,23 +10,28 @@ import { GameGetSingleGameIdUri, GetGameUri } from "../../service-paths";
 interface GameSetupProps {
   createGame?: (playerName: string) => void;
   joinGame?: (gameId: string, playerName: string) => void;
+  defaultGameId?: string;
+  playerId?: string;
   onSetupModalChanged?: (open: boolean) => void;
 }
 
 export const GameSetup = (props: GameSetupProps) => {
-  const { createGame, joinGame, onSetupModalChanged } = props;
+  const { createGame, joinGame, defaultGameId, playerId, onSetupModalChanged } =
+    props;
   const [showCreateGameUI, setShowCreateGameUI] = useState<boolean>(false);
   const [showJoinGameUI, setShowJoinGameUI] = useState<boolean>(false);
+  const [showGameNotFoundUI, setShowGameNotFoundUI] = useState<boolean>(false);
+  const [showGameCannotJoinUI, setShowGameCannotJoinUI] =
+    useState<boolean>(false);
   const [gameId, setGameId] = useState<string | undefined>();
   const [playerName, setPlayerName] = useState<string | undefined>();
-  const [defaultGameId, setDefaultGameId] = useState<string | undefined>();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastCheckedPathRef = useRef<string | null>(null);
 
   const checkForId = useCallback(async () => {
     const result = await callGetRoute(GameGetSingleGameIdUri());
     if (result.status === 200) {
-      setDefaultGameId(result.data);
+      setGameId(result.data);
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -59,33 +64,55 @@ export const GameSetup = (props: GameSetupProps) => {
 
   const closeJoinUI = useCallback(() => {
     setShowJoinGameUI(false);
-    // clear default id after closing so subsequent opens behave normally
-    setDefaultGameId(undefined);
+    setShowGameNotFoundUI(false);
+    setShowGameCannotJoinUI(false);
+    // clear game id after closing so subsequent opens behave normally
+    setGameId(undefined);
     notifySetupChanged(false);
   }, [notifySetupChanged]);
 
-  // Prefill game id when visiting /<GAME_ID>
+  // Prefill game id when defaultGameId is provided and no playerId (meaning user needs to join)
   useEffect(() => {
-    // If user navigates to /<GAME_ID> validate that the game exists before opening the join UI
-    (async () => {
-      try {
-        const path = window.location.pathname.replace(/^\/+|\/+$/g, "");
-        if (!path || path.length !== 4 || lastCheckedPathRef.current === path)
-          return;
+    const validateAndShowGame = async () => {
+      if (
+        defaultGameId &&
+        !playerId &&
+        defaultGameId !== lastCheckedPathRef.current
+      ) {
+        lastCheckedPathRef.current = defaultGameId;
 
-        lastCheckedPathRef.current = path;
-        const id = path.toUpperCase();
-        const result = await callGetRoute(GetGameUri(id));
-        if (result.status === 200) {
-          setDefaultGameId(id);
-          setShowJoinGameUI(true);
+        try {
+          const result = await callGetRoute(GetGameUri(defaultGameId));
+          if (result.status === 200) {
+            const gameData = result.data;
+            if (gameData.status === "acceptingPlayers") {
+              // Game exists and can be joined
+              setGameId(defaultGameId);
+              setShowJoinGameUI(true);
+              notifySetupChanged(true);
+            } else {
+              // Game exists but cannot be joined
+              setGameId(defaultGameId);
+              setShowGameCannotJoinUI(true);
+              notifySetupChanged(true);
+            }
+          } else {
+            // Game doesn't exist
+            setGameId(defaultGameId);
+            setShowGameNotFoundUI(true);
+            notifySetupChanged(true);
+          }
+        } catch (error) {
+          // Error loading game
+          setGameId(defaultGameId);
+          setShowGameNotFoundUI(true);
           notifySetupChanged(true);
         }
-      } catch (e) {
-        // ignore any errors – don't open the modal
       }
-    })();
-  }, [notifySetupChanged]); // Include notifySetupChanged since it's used inside
+    };
+
+    validateAndShowGame();
+  }, [defaultGameId, playerId, notifySetupChanged]);
 
   useEffect(() => {
     if (timerRef?.current) {
@@ -142,7 +169,7 @@ export const GameSetup = (props: GameSetupProps) => {
               const gid = (entered ?? gameId) as string | undefined;
               // if gid and name present, join
               if ((gid?.length ?? 0) === 4 && (playerName?.length ?? 0) > 0) {
-                setDefaultGameId(undefined);
+                setGameId(undefined);
                 joinGame?.(gid!, playerName!);
                 closeJoinUI();
               }
@@ -169,6 +196,38 @@ export const GameSetup = (props: GameSetupProps) => {
           autoFocus={!!defaultGameId}
         />
       </Stack>
+    );
+  };
+
+  // Game not found UI
+  const getGameNotFoundUI = () => {
+    return (
+      <div style={{ textAlign: "center", padding: "1rem" }}>
+        <p style={{ fontSize: "1.4rem", color: "#8B4513", fontWeight: "bold" }}>
+          Shiver me timbers! This game be lost to the depths!
+        </p>
+        <p
+          style={{ fontSize: "1.1rem", color: "#654321", marginTop: "0.5rem" }}
+        >
+          No game with that code exists, ye landlubber!
+        </p>
+      </div>
+    );
+  };
+
+  // Game cannot be joined UI
+  const getGameCannotJoinUI = () => {
+    return (
+      <div style={{ textAlign: "center", padding: "1rem" }}>
+        <p style={{ fontSize: "1.4rem", color: "#8B4513", fontWeight: "bold" }}>
+          Arrr! This game be already underway, ye scurvy dog!
+        </p>
+        <p
+          style={{ fontSize: "1.1rem", color: "#654321", marginTop: "0.5rem" }}
+        >
+          The battle has begun or ended - find another crew!
+        </p>
+      </div>
     );
   };
 
@@ -200,7 +259,7 @@ export const GameSetup = (props: GameSetupProps) => {
             onAccept={() => {
               const gid = gameId ?? defaultGameId;
               if (!gid || !playerName) return;
-              setDefaultGameId(undefined);
+              setGameId(undefined);
               joinGame?.(gid, playerName!);
               closeJoinUI();
             }}
@@ -211,6 +270,54 @@ export const GameSetup = (props: GameSetupProps) => {
             show={true}
             centered={false}
             fullScreen={false}
+          />
+        )}
+
+        {showGameNotFoundUI && (
+          <SimpleModal
+            title={"Lost at Sea!"}
+            content={getGameNotFoundUI()}
+            defaultButtonContent={"Back to Port"}
+            onAccept={() => {
+              setShowGameNotFoundUI(false);
+              setGameId(undefined);
+              // Navigate to root
+              window.location.href = "/";
+            }}
+            allowAccept={true}
+            show={true}
+            centered={false}
+            fullScreen={false}
+            onCancel={() => {
+              setShowGameCannotJoinUI(false);
+              setGameId(undefined);
+              // Navigate to root
+              window.location.href = "/";
+            }}
+          />
+        )}
+
+        {showGameCannotJoinUI && (
+          <SimpleModal
+            title={"Cannot Join Game"}
+            content={getGameCannotJoinUI()}
+            defaultButtonContent={"Back to Port"}
+            onAccept={() => {
+              setShowGameCannotJoinUI(false);
+              setGameId(undefined);
+              // Navigate to root
+              window.location.href = "/";
+            }}
+            allowAccept={true}
+            show={true}
+            centered={false}
+            fullScreen={false}
+            onCancel={() => {
+              setShowGameCannotJoinUI(false);
+              setGameId(undefined);
+              // Navigate to root
+              window.location.href = "/";
+            }}
           />
         )}
 

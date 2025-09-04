@@ -1,6 +1,7 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import Stack from "react-bootstrap/esm/Stack";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { callGetRoute, callPostRoute, callPutRoute } from "./utils/api-utils";
 import {
   AddPlayerUri,
@@ -16,18 +17,21 @@ import { Game, GameDifficulty, GameStatus, Player } from "./types/game";
 import { PlayArea } from "./components/PlayArea";
 import { GameInfo } from "./components/GameInfo";
 import { GameSetup } from "./components/GameSetup";
-import { useCookies } from "react-cookie";
 import { SimpleModal } from "./common/simple-modal";
 import classNames from "classnames";
 import { NavLink } from "react-bootstrap";
 import { Button } from "react-bootstrap";
 
 const App = () => {
+  const navigate = useNavigate();
+  const { gameId: urlGameId, playerId: urlPlayerId } = useParams<{
+    gameId?: string;
+    playerId?: string;
+  }>();
   const [game, setGame] = useState<Game | null>(null);
   const [me, setMe] = useState<Player>();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const currentHashRef = useRef<string | undefined>();
-  const [cookies, setCookie] = useCookies(["skull_king"]);
   const [showExitPopup, setShowExitPopup] = useState(false);
   const [gameChanging, setChangingGame] = useState(false);
   const [hasWarmedUp, setHasWarmedUp] = useState(false);
@@ -83,43 +87,44 @@ const App = () => {
     [updateGame]
   );
 
-  // Handle storing and retrieving game cookies. This
-  // allows a player to return to a game if they happen
-  // to refresh the page, or if their browser exits.
+  // Handle URL-based game and player loading
   useEffect(() => {
-    if (game?.status == GameStatus.gameOver && cookies.skull_king) {
-      setCookie("skull_king", null);
-      return;
-    }
+    const loadFromUrl = async () => {
+      // If we have both gameId and playerId in URL, try to load the game and validate the player
+      if (urlGameId && urlPlayerId) {
+        try {
+          const gameResult = await callGetRoute(GetGameUri(urlGameId));
+          if (gameResult.status === 200) {
+            const gameData = gameResult.data;
+            const player = (gameData as Game).playerRoundInfo?.find(
+              (pri) => pri.player?.id === urlPlayerId
+            )?.player;
 
-    if (game?.status == GameStatus.gameOver) {
-      return;
-    }
-
-    if (game?.id && me && !cookies.skull_king) {
-      setCookie("skull_king", { gameId: game.id, me: { ...me } });
-      return;
-    }
-
-    if (cookies.skull_king && !game?.id) {
-      const { gameId, me } = cookies.skull_king;
-      if (gameId && me) {
-        setMe(me);
-        startUpdateTimer(gameId);
+            if (player) {
+              setGame(gameData);
+              setMe(player);
+              startUpdateTimer(urlGameId);
+            } else {
+              // Player not found in game, redirect to home
+              navigate("/");
+            }
+          } else {
+            // Game not found, redirect to home
+            navigate("/");
+          }
+        } catch (error) {
+          // Error loading, redirect to home
+          navigate("/");
+        }
       }
+      // If we only have gameId, the GameSetup component will handle showing the join UI
+      // If no parameters, show the default setup UI
+    };
 
-      // Always clear out the cookie once on reload to ensure that a
-      // player isn't stuck trying to load a "dead game"
-      setCookie("skull_king", null);
+    if (hasWarmedUp && !game) {
+      loadFromUrl();
     }
-  }, [
-    cookies.skull_king,
-    game?.id,
-    game?.status,
-    me,
-    setCookie,
-    startUpdateTimer,
-  ]);
+  }, [urlGameId, urlPlayerId, hasWarmedUp, navigate, startUpdateTimer, game]);
 
   const createGame = useCallback(
     async (playerName: string) => {
@@ -133,12 +138,15 @@ const App = () => {
       if (result.status !== 201) {
         console.log("Error creating game", result.status, result.statusText);
       } else {
-        setGame(result.data);
-        startUpdateTimer(result.data?.id);
-        setMe((result.data as Game).playerRoundInfo[0].player);
+        const gameData = result.data as Game;
+        const player = gameData.playerRoundInfo[0].player;
+        setGame(gameData);
+        setMe(player);
+        // Navigate to the game URL with player ID
+        navigate(`/${gameData.id}/${player!.id}`);
       }
     },
-    [startUpdateTimer]
+    [navigate]
   );
 
   const joinGame = useCallback(
@@ -156,11 +164,13 @@ const App = () => {
       if (result.status !== 200) {
         console.log("Error joining game", result.status, result.statusText);
       } else {
-        startUpdateTimer(gameId);
-        setMe(result.data);
+        const player = result.data;
+        setMe(player);
+        // Navigate to the game URL with player ID
+        navigate(`/${gameId}/${player.id}`);
       }
     },
-    [startUpdateTimer]
+    [navigate]
   );
 
   const editPlayerName = useCallback(
@@ -267,16 +277,15 @@ const App = () => {
   );
 
   const exitGame = useCallback(() => {
-    // Clear the cookie and clear the game
-    // Stop listening for updates.
-    setCookie("skull_king", null);
+    // Clear the game state and navigate to home
     setGame(null);
     setMe(undefined);
     clearInterval(timerRef.current!);
     timerRef.current = null;
     currentHashRef.current = undefined;
     setShowExitPopup(false);
-  }, [setCookie]);
+    navigate("/");
+  }, [navigate]);
 
   return (
     <div className={classNames("App", "pirateFont")}>
@@ -310,8 +319,10 @@ const App = () => {
           }
         />
         <GameSetup
-          createGame={!game ? createGame : undefined}
+          createGame={!game && !urlGameId ? createGame : undefined}
           joinGame={!game ? joinGame : undefined}
+          defaultGameId={urlGameId}
+          playerId={urlPlayerId}
           onSetupModalChanged={(open: boolean) => setSetupOpen(open)}
         />
         {game && game?.status !== GameStatus.acceptingPlayers && (
