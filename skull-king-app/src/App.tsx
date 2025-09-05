@@ -144,12 +144,12 @@ const App = () => {
   );
 
   const startUpdateTimer = useCallback(
-    (id: string) => {
+    (id: string, currentHash?: string) => {
       if (timerRef?.current) {
         return;
       }
 
-      updateGame(id, currentHashRef.current ?? "");
+      updateGame(id, currentHash ?? currentHashRef.current ?? "");
 
       timerRef.current = setInterval(() => {
         updateGame(id, currentHashRef.current ?? "");
@@ -174,7 +174,7 @@ const App = () => {
             if (player) {
               setGame(gameData);
               setMe(player);
-              startUpdateTimer(urlGameId);
+              startUpdateTimer(urlGameId, gameData.hash);
             } else {
               // Player not found in game, redirect to home
               navigate("/");
@@ -214,11 +214,12 @@ const App = () => {
         setGame(gameData);
         setMe(player);
         setSetupOpen(false);
+        startUpdateTimer(gameData.id, gameData.hash);
         // Navigate to the game URL with player ID
         navigate(`/${gameData.id}/${player!.id}`);
       }
     },
-    [navigate]
+    [navigate, startUpdateTimer]
   );
 
   const joinGame = useCallback(
@@ -237,13 +238,21 @@ const App = () => {
         console.log("Error joining game", result.status, result.statusText);
       } else {
         const player = result.data;
-        setMe(player);
-        setSetupOpen(false);
-        // Navigate to the game URL with player ID
-        navigate(`/${gameId}/${player.id}`);
+        // Load the updated game
+        const gameResult = await callGetRoute(GetGameUri(gameId));
+        if (gameResult.status === 200) {
+          const gameData = gameResult.data as Game;
+          setGame(gameData);
+          setMe(player);
+          setSetupOpen(false);
+          // Start polling for updates
+          startUpdateTimer(gameId, gameData.hash);
+          // Navigate to the game URL with player ID
+          navigate(`/${gameId}/${player.id}`);
+        }
       }
     },
-    [navigate]
+    [navigate, startUpdateTimer]
   );
 
   const editPlayerName = useCallback(
