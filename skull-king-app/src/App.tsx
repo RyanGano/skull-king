@@ -79,7 +79,7 @@ const App = () => {
         setTimeout(() => {
           setShowGameEndedMessage(false);
           navigate("/");
-        }, 3000);
+        }, 10000);
         return;
       }
       if (currentGame.status !== 304) {
