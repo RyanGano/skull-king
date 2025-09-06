@@ -14,6 +14,7 @@ import {
   EditPlayerUri,
   GameMoveNextPhaseUri,
   GameMovePreviousPhaseUri,
+  GameResetUri,
   GetGameUri,
   GetWarmupUri,
   RemovePlayerUri,
@@ -43,6 +44,8 @@ const App = () => {
   const [hasWarmedUp, setHasWarmedUp] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
   const [showGameEndedMessage, setShowGameEndedMessage] = useState(false);
+  const [gameEndedAt, setGameEndedAt] = useState<Date | null>(null);
+  const [showRestartButtons, setShowRestartButtons] = useState(false);
 
   useEffect(() => {
     if (hasWarmedUp) {
@@ -63,6 +66,17 @@ const App = () => {
   useEffect(() => {
     currentHashRef.current = game?.hash;
   }, [game?.hash]);
+
+  useEffect(() => {
+    if (gameEndedAt && game?.status === GameStatus.gameOver) {
+      const timer = setTimeout(() => {
+        setShowRestartButtons(true);
+      }, 2500);
+      return () => clearTimeout(timer);
+    } else {
+      setShowRestartButtons(false);
+    }
+  }, [gameEndedAt, game?.status]);
 
   const updateGame = useCallback(
     async (id: string, currentHash: string) => {
@@ -98,9 +112,17 @@ const App = () => {
           return;
         }
         setGame(gameData);
+
+        // Check if game just ended
+        if (
+          gameData.status === GameStatus.gameOver &&
+          game?.status !== GameStatus.gameOver
+        ) {
+          setGameEndedAt(new Date());
+        }
       }
     },
-    [me, navigate]
+    [me, navigate, game?.status]
   );
 
   const getCurrentHash = useCallback(
@@ -300,6 +322,29 @@ const App = () => {
     [game?.hash, game?.id, game?.playerRoundInfo, me?.id, updateGame]
   );
 
+  const restartGame = useCallback(async () => {
+    if (!game || !me) {
+      console.log("No game or player");
+      return;
+    }
+
+    const result = await callGetRoute(
+      GameResetUri(game.id, me.id, currentHashRef.current ?? "")
+    );
+
+    if (result.status !== 200) {
+      console.log("Error resetting game", result.status, result.statusText);
+      return;
+    }
+
+    // Clear the game state for restart
+    setGameEndedAt(null);
+    setShowRestartButtons(false);
+
+    // Update the game with the reset state
+    updateGame(game.id, currentHashRef.current ?? "");
+  }, [game, me, updateGame]);
+
   const moveToPreviousGameStatus = useCallback(
     async (hash?: string) => {
       if (!game || !me) {
@@ -348,7 +393,7 @@ const App = () => {
           setTimeout(async () => {
             const hash = await getCurrentHash(game.id);
             moveToNextGameStatus(hash);
-          }, 500); // 500 milliseconds delay
+          }, 500);
         }
       } else {
         updateGame(game.id, currentHashRef.current ?? "");
@@ -377,6 +422,8 @@ const App = () => {
     timerRef.current = null;
     currentHashRef.current = undefined;
     setShowExitPopup(false);
+    setGameEndedAt(null);
+    setShowRestartButtons(false);
     navigate("/");
   }, [game, me, navigate]);
 
@@ -427,6 +474,8 @@ const App = () => {
               moveToPreviousGameStatus={moveToPreviousGameStatus}
               gameChanging={gameChanging}
               getCurrentHash={() => getCurrentHash(game.id)}
+              showRestartButtons={showRestartButtons}
+              onRestartGame={restartGame}
             />
             <div style={{ height: 75 }} />
           </div>

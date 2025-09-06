@@ -4,20 +4,24 @@ public record PlayerRounds
   public required Player? Player { get; init; }
   public IReadOnlyList<Round> Rounds => EditablePlayerRounds;
 
-  public void AddRound(int playerCount)
+  public Round? AddRound(int playerCount)
   {
     if (Rounds!.Count == 10)
       throw new InvalidOperationException("Cannot have more than 10 rounds");
 
-    EditablePlayerRounds!.Add(new Round(int.Min(Rounds.Count + 1, playerCount == 8 ? 8 : 10)));
+    var newRound = new Round(int.Min(Rounds.Count + 1, playerCount == 8 ? 8 : 10));
+    EditablePlayerRounds!.Add(newRound);
+    return newRound;
   }
 
-  public void RemoveLastRound()
+  public Round? RemoveLastRound()
   {
     if (EditablePlayerRounds!.Count == 1)
       throw new InvalidOperationException("Cannot remove round before round has started");
 
-    EditablePlayerRounds!.RemoveAt(EditablePlayerRounds.Count - 1);
+    var lastRound = EditablePlayerRounds.Last();
+    EditablePlayerRounds!.Remove(lastRound);
+    return lastRound;
   }
 
   public static PlayerRounds Create(Player player)

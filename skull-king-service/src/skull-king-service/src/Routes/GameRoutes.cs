@@ -222,6 +222,65 @@ public static class GameRoutes
     .WithName("StartGame")
     .RequireCors(cors);
 
+    app.MapGet("/games/{id}/reset", async (GameId id, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    {
+      // Check the knownHash compared to current stored hash
+      // Do not allow updates if the user's hash doesn't match the current hash
+      var currentHash = db.Hashes.Find(id.Value);
+      if (currentHash?.Value != knownHash)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status412PreconditionFailed;
+        return;
+      }
+
+      var game = await GetFullGame(id, db);
+      if (game is null)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+      }
+
+      if (game.PlayerRoundInfo.First().Player!.Id != playerId)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return;
+      }
+
+      if (game.Status != GameStatus.GameOver)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+        return;
+      }
+
+      try
+      {
+        // Move the game to the beginning phase
+        while (!(game.PlayerRoundInfo[0].Rounds.Count == 1 && game.Status == GameStatus.BiddingOpen))
+        {
+          foreach (var round in game.MoveToPreviousPhase().Where(round => round is not null))
+            db.Rounds.Remove(round!);
+        }
+
+        foreach (var playerRoundInfo in game.PlayerRoundInfo)
+          playerRoundInfo.ClearBid();
+
+        if (game.IsRandomBid)
+        {
+          foreach (var round in game.MoveToNextPhase().Where(round => round is not null))
+            db.Rounds.Add(round!);
+        }
+
+        db.Games.Update(game);
+        await UpdateHashAndSaveAsync(db, game);
+      }
+      catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+      }
+    })
+    .WithName("ResetGame")
+    .RequireCors(cors);
+
 
     app.MapPut("/games/{id}/players/reorder", async (GameId id, PlayerOrderDto playerOrderDto, HttpContext httpContext, SkullKingDbContext db) =>
     {
@@ -290,11 +349,8 @@ public static class GameRoutes
       try
       {
         // Move the game to the next phase
-        game.MoveToNextPhase();
-
-        // Store the new data in the database as needed
-        if (game.Status == GameStatus.BiddingOpen || game.IsRandomBid && game.Status == GameStatus.BiddingClosed)
-          db.Rounds.AddRange(game.PlayerRoundInfo.Select(x => x.Rounds!.Last()));
+        foreach (var round in game.MoveToNextPhase().Where(round => round is not null))
+          db.Rounds.Add(round!);
 
         db.Games.Update(game);
         await UpdateHashAndSaveAsync(db, game);
@@ -333,8 +389,9 @@ public static class GameRoutes
 
       try
       {
-        // Move the game to the next phase
-        game.MoveToPreviousPhase();
+        // Move the game to the previous phase
+        foreach (var round in game.MoveToPreviousPhase().Where(round => round is not null))
+          db.Rounds.Remove(round!);
 
         db.Games.Update(game);
         await UpdateHashAndSaveAsync(db, game);

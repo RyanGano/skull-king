@@ -16,6 +16,8 @@ interface PlayAreaProps {
   moveToPreviousGameStatus: () => void;
   gameChanging: boolean;
   getCurrentHash: () => Promise<string>;
+  showRestartButtons?: boolean;
+  onRestartGame?: () => void;
 }
 
 export const PlayArea = (props: PlayAreaProps) => {
@@ -26,6 +28,8 @@ export const PlayArea = (props: PlayAreaProps) => {
     moveToPreviousGameStatus,
     gameChanging,
     getCurrentHash,
+    showRestartButtons,
+    onRestartGame,
   } = props;
   const [changingGame, setChangingGame] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
@@ -226,6 +230,18 @@ export const PlayArea = (props: PlayAreaProps) => {
           }
         />
       </div>
+      {showRestartButtons &&
+        game.status === GameStatus.gameOver &&
+        game.playerRoundInfo[0].player.id === me.id && (
+          <div className="restartButtonsContainer">
+            <button
+              className="restartButton restartGameButton"
+              onClick={onRestartGame}
+            >
+              Begin a fresh voyage!
+            </button>
+          </div>
+        )}
     </div>
   );
 };

@@ -109,18 +109,23 @@ public record Game
     return JsonSerializer.Serialize(this).GetHashCode();
   }
 
-  public void MoveToNextPhase()
+  public IEnumerable<Round?> MoveToNextPhase()
   {
     if (Status == GameStatus.AcceptingPlayers)
       throw new InvalidOperationException("Cannot move to next phase until game has started");
     if (Status == GameStatus.GameOver)
       throw new InvalidOperationException("Cannot move to next phase after game has ended");
 
+    List<Round?> addedRounds = [];
+
     if (Status == GameStatus.BiddingOpen)
     {
       // Make sure all players have made a bid (use 0 as default if they have not)
       foreach (var playerWithNoBid in PlayerRoundInfo.Where(x => x.Rounds!.Last().Bid is null))
         playerWithNoBid.SetBid(0);
+
+      if (IsRandomBid)
+        SetRandomBids();
 
       Status = GameStatus.BiddingClosed;
     }
@@ -134,12 +139,12 @@ public record Game
       if (PlayerRoundInfo[0].Rounds!.Count == 10)
       {
         Status = GameStatus.GameOver;
-        return;
+        return addedRounds;
       }
 
       // Now add a new round to each player
       foreach (var playerRoundInfo in PlayerRoundInfo)
-        playerRoundInfo.AddRound(PlayerRoundInfo.Count);
+        addedRounds.Add(playerRoundInfo.AddRound(PlayerRoundInfo.Count));
 
       Status = GameStatus.BiddingOpen;
 
@@ -149,12 +154,16 @@ public record Game
         MoveToNextPhase();
       }
     }
+
+    return addedRounds;
   }
 
-  public void MoveToPreviousPhase()
+  public IEnumerable<Round?> MoveToPreviousPhase()
   {
     if (Status == GameStatus.BiddingOpen && PlayerRoundInfo[0].Rounds!.Count == 1)
       throw new InvalidOperationException("Cannot move to phase earlier than the beginning of the game.");
+
+    List<Round?> removedRounds = [];
 
     if (Status == GameStatus.BiddingClosed)
     {
@@ -167,7 +176,7 @@ public record Game
     else if (Status == GameStatus.BiddingOpen)
     {
       foreach (var playerRoundInfo in PlayerRoundInfo)
-        playerRoundInfo.RemoveLastRound();
+        removedRounds.Add(playerRoundInfo.RemoveLastRound());
 
       Status = GameStatus.BiddingClosed;
     }
@@ -175,6 +184,8 @@ public record Game
     {
       Status = GameStatus.BiddingClosed;
     }
+
+    return removedRounds;
   }
 
   internal GameDto MapToDto()
