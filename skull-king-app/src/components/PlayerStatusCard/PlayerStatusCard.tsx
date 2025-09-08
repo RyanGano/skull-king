@@ -18,7 +18,7 @@ interface BonusOption {
 // Consolidated dropdown options with maxCount for each
 const BONUS_OPTIONS: BonusOption[] = [
   { id: "color14", label: "Yellow/Green/Purple 14", points: 10, maxCount: 3 },
-  { id: "black14", label: "Black 14", points: 10, maxCount: 1 },
+  { id: "black14", label: "Black 14", points: 20, maxCount: 1 },
   {
     id: "mermaid",
     label: "Mermaid captured with a Pirate",
