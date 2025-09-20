@@ -5,7 +5,59 @@
 
 .playerDisplay {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  width: 100%;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background-color: transparent;
+  border: 2px solid transparent;
+  cursor: default;
+
+  &.can-drag {
+    cursor: grab;
+  }
+
+  &.is-dragging {
+    opacity: 0.5;
+  }
+}
+
+.playerGrabber {
+  width: 24px;
+  margin-right: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+}
+
+.playerGripIcon {
+  color: #6c757d;
+  cursor: grab;
+}
+
+.playerName {
+  flex: 1;
+}
+
+.playerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.insertionIndicator {
+  height: 2px;
+  background-color: transparent;
+  margin: 1px 0;
+  border-radius: 1px;
+  transition: background-color 0.1s ease;
+
+  &.active {
+    background-color: #007bff;
+  }
 }
 
 .buttonStyle {

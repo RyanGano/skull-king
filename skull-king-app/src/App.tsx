@@ -448,9 +448,11 @@ const App = () => {
   const reorderPlayers = useCallback(
     async (playerOrder: string[]) => {
       if (!game?.id || !me?.id) {
-        console.log("No game or player id");
         return;
       }
+
+      // First, get the latest game data to ensure we have the current hash
+      await updateGame(game.id, "");
 
       const result = await callPutRoute(
         GameReorderPlayersUri(game.id),
@@ -464,11 +466,7 @@ const App = () => {
       );
 
       if (result.status !== 200) {
-        console.log(
-          "Error reordering players",
-          result.status,
-          result.statusText
-        );
+        // Error handling could be added here if needed
       } else {
         updateGame(game.id, currentHashRef.current ?? "");
       }

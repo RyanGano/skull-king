@@ -1,8 +1,8 @@
 import { Button, Stack } from "react-bootstrap";
 import classNames from "classnames";
-import { ChevronUp, ChevronDown } from "react-bootstrap-icons";
+import { GripVertical } from "react-bootstrap-icons";
 import { Game, GameDifficulty, GameStatus, Player } from "../../types/game";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SimpleModal } from "../../common/simple-modal";
 import { TextInputArea } from "../../common/input-area/text-input-area";
 
@@ -33,6 +33,21 @@ export const GameInfo = (props: GameInfoProps) => {
   const [showEditPlayerUI, setShowEditPlayerUI] = useState<boolean>(false);
   const [myUpdatedName, setMyUpdatedName] = useState<string>();
   const [showRandomBidPopup, setShowRandomBidPopup] = useState<boolean>(false);
+  const [draggedPlayerIndex, setDraggedPlayerIndex] = useState<number | null>(
+    null
+  );
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const lastDragUpdateRef = useRef<number>(0);
+
+  const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
+    setDraggedPlayerIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedPlayerIndex(null);
+    setDragOverIndex(null);
+  }, []);
 
   const getEditPlayerNameUI = () => {
     return (
@@ -84,49 +99,9 @@ export const GameInfo = (props: GameInfoProps) => {
     [startGame, onTutorialContextChanged]
   );
 
-  const movePlayerUp = useCallback(
-    (playerIndex: number) => {
-      if (!game?.playerRoundInfo || playerIndex <= 1) return; // Can't move first player or if already at top (after first)
-
-      const newOrder = [...game.playerRoundInfo];
-      [newOrder[playerIndex], newOrder[playerIndex - 1]] = [
-        newOrder[playerIndex - 1],
-        newOrder[playerIndex],
-      ];
-
-      const playerIds = newOrder.map((pri) => pri.player.id);
-      reorderPlayers?.(playerIds);
-    },
-    [game?.playerRoundInfo, reorderPlayers]
-  );
-
-  const movePlayerDown = useCallback(
-    (playerIndex: number) => {
-      if (
-        !game?.playerRoundInfo ||
-        playerIndex >= game.playerRoundInfo.length - 1
-      )
-        return; // Can't move last player
-
-      const newOrder = [...game.playerRoundInfo];
-      [newOrder[playerIndex], newOrder[playerIndex + 1]] = [
-        newOrder[playerIndex + 1],
-        newOrder[playerIndex],
-      ];
-
-      const playerIds = newOrder.map((pri) => pri.player.id);
-      reorderPlayers?.(playerIds);
-    },
-    [game?.playerRoundInfo, reorderPlayers]
-  );
-
   // Show tutorial when startGame buttons are available (user can start the game)
   useEffect(() => {
-    console.log("GameInfo: startGame prop changed:", !!startGame);
     if (startGame) {
-      console.log(
-        "GameInfo: Calling onTutorialContextChanged with startGameOptions"
-      );
       onTutorialContextChanged?.(TutorialContext.startGameOptions);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -135,9 +110,6 @@ export const GameInfo = (props: GameInfoProps) => {
   // Show tutorial when auto bid popup is opened
   useEffect(() => {
     if (showRandomBidPopup) {
-      console.log(
-        "GameInfo: Calling onTutorialContextChanged with startingAutoBid"
-      );
       onTutorialContextChanged?.(TutorialContext.startingAutoBid);
     }
   }, [showRandomBidPopup, onTutorialContextChanged]);
@@ -193,130 +165,167 @@ export const GameInfo = (props: GameInfoProps) => {
       {game?.status === GameStatus.acceptingPlayers && (
         <Stack direction="horizontal" gap={3} className="playerList">
           <>Players:</>
-          <Stack gap={2}>
+          <Stack
+            gap={1}
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (draggedPlayerIndex === null) {
+                return;
+              }
+
+              const now = Date.now();
+              // Throttle updates to every 100ms to reduce jumpiness further
+              if (now - lastDragUpdateRef.current < 100) {
+                return;
+              }
+
+              // Find insertion point based on mouse position
+              const container = e.currentTarget as HTMLElement;
+              const playerItems = container.querySelectorAll(".playerDisplay");
+              const y = e.clientY;
+              let newDragOverIndex: number | null = null;
+
+              // Check each item to see where the mouse is
+              for (let i = 0; i < playerItems.length; i++) {
+                const rect = (
+                  playerItems[i] as HTMLElement
+                ).getBoundingClientRect();
+
+                if (y >= rect.top && y <= rect.bottom) {
+                  // Mouse is over this player item
+
+                  if (i === playerItems.length - 1) {
+                    // Last item - bottom half means insert after
+                    const isBottomHalf = y > rect.top + rect.height / 2;
+                    if (isBottomHalf) {
+                      newDragOverIndex = game!.playerRoundInfo.length;
+                    }
+                    // Top half of last item = no insertion indicator
+                  } else {
+                    // Not the last item - check if we're in the bottom half (insertion zone)
+                    const isBottomHalf = y > rect.top + rect.height / 2;
+                    if (isBottomHalf) {
+                      newDragOverIndex = i + 1; // Insert after this item
+                    }
+                    // Top half = no insertion indicator (would be insertion before, but we handle that in the gap)
+                  }
+                  break;
+                }
+              }
+
+              // Check gaps between items (insertion points between items)
+              if (newDragOverIndex === null) {
+                for (let i = 0; i < playerItems.length - 1; i++) {
+                  const currentRect = (
+                    playerItems[i] as HTMLElement
+                  ).getBoundingClientRect();
+                  const nextRect = (
+                    playerItems[i + 1] as HTMLElement
+                  ).getBoundingClientRect();
+
+                  // Gap between items i and i+1
+                  if (y > currentRect.bottom && y < nextRect.top) {
+                    newDragOverIndex = i + 1; // Insert between these items
+                    break;
+                  }
+                }
+              }
+
+              // Only update state if the insertion index has actually changed
+              if (newDragOverIndex !== dragOverIndex) {
+                setDragOverIndex(newDragOverIndex);
+                lastDragUpdateRef.current = now;
+              }
+
+              e.dataTransfer.dropEffect = "move";
+            }}
+            onDrop={() => {
+              if (draggedPlayerIndex === null || dragOverIndex === null) {
+                return;
+              }
+
+              const newOrder = [...game!.playerRoundInfo];
+              const draggedPlayer = newOrder[draggedPlayerIndex];
+
+              // Remove dragged player from current position
+              newOrder.splice(draggedPlayerIndex, 1);
+
+              // Insert at the calculated position
+              let insertIndex = dragOverIndex;
+              if (draggedPlayerIndex < dragOverIndex) {
+                insertIndex = dragOverIndex - 1;
+              }
+
+              newOrder.splice(insertIndex, 0, draggedPlayer);
+
+              const playerIds = newOrder.map((pri) => pri.player.id);
+              if (reorderPlayers) {
+                reorderPlayers(playerIds);
+              }
+
+              setDraggedPlayerIndex(null);
+              setDragOverIndex(null);
+            }}
+          >
             {game?.playerRoundInfo.map((x, index) => {
               const isCaptain = game.playerRoundInfo[0].player.id === me.id;
               const canReorder = isCaptain && game.playerRoundInfo.length > 2;
-              const canMoveUp = canReorder && index > 1; // Can't move first player, and second player can't move up
-              const canMoveDown =
-                canReorder && index < game.playerRoundInfo.length - 1;
               const isFirstPlayer = index === 0;
+              const showInsertionBefore =
+                dragOverIndex === index && draggedPlayerIndex !== null;
 
               return (
-                <div
-                  key={x.player.id}
-                  className="playerDisplay"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    width: "100%",
-                  }}
-                >
-                  <span style={{ flex: 1 }}>{x.player.name}</span>
+                <div key={x.player.id}>
+                  {/* Always render insertion line to reserve space and prevent height changes */}
                   <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
+                    className={classNames("insertionIndicator", {
+                      active: showInsertionBefore,
+                    })}
+                  />
+
+                  <div
+                    className={classNames("playerDisplay", {
+                      "can-drag": !isFirstPlayer && canReorder,
+                      "is-dragging": draggedPlayerIndex === index,
+                    })}
+                    draggable={!isFirstPlayer && canReorder}
+                    onDragStart={(e) => {
+                      handleDragStart(e, index);
                     }}
+                    onDragEnd={handleDragEnd}
                   >
-                    {me.id === x.player.id && (
-                      <Button
-                        variant="link"
-                        className="textLink"
-                        onClick={() => setShowEditPlayerUI(true)}
-                      >
-                        edit
-                      </Button>
-                    )}
-                    {!isFirstPlayer && canReorder && (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "row",
-                          gap: "2px",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Button
-                          variant="link"
-                          size="sm"
-                          disabled={!canMoveUp}
-                          onClick={() => movePlayerUp(index)}
-                          style={{
-                            padding: "4px 6px",
-                            lineHeight: 1,
-                            border: "none",
-                            backgroundColor: "transparent",
-                            color: canMoveUp ? "#2c3e50" : "#adb5bd",
-                            opacity: canMoveUp ? 1 : 0.4,
-                            fontSize: "16px",
-                            fontWeight: "bold",
-                            minWidth: "24px",
-                            height: "24px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            cursor: canMoveUp ? "pointer" : "not-allowed",
-                          }}
-                          onMouseEnter={(e) => {
-                            if (canMoveUp) {
-                              e.currentTarget.style.color = "#1a252f";
-                              e.currentTarget.style.transform = "scale(1.1)";
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (canMoveUp) {
-                              e.currentTarget.style.color = "#2c3e50";
-                              e.currentTarget.style.transform = "scale(1)";
-                            }
-                          }}
-                        >
-                          <ChevronUp size={16} strokeWidth={2.5} />
-                        </Button>
-                        <Button
-                          variant="link"
-                          size="sm"
-                          disabled={!canMoveDown}
-                          onClick={() => movePlayerDown(index)}
-                          style={{
-                            padding: "4px 6px",
-                            lineHeight: 1,
-                            border: "none",
-                            backgroundColor: "transparent",
-                            color: canMoveDown ? "#2c3e50" : "#adb5bd",
-                            opacity: canMoveDown ? 1 : 0.4,
-                            fontSize: "16px",
-                            fontWeight: "bold",
-                            minWidth: "24px",
-                            height: "24px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            cursor: canMoveDown ? "pointer" : "not-allowed",
-                          }}
-                          onMouseEnter={(e) => {
-                            if (canMoveDown) {
-                              e.currentTarget.style.color = "#1a252f";
-                              e.currentTarget.style.transform = "scale(1.1)";
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (canMoveDown) {
-                              e.currentTarget.style.color = "#2c3e50";
-                              e.currentTarget.style.transform = "scale(1)";
-                            }
-                          }}
-                        >
-                          <ChevronDown size={16} strokeWidth={2.5} />
-                        </Button>
+                    {/* Grabber space only for Captain */}
+                    {canReorder && (
+                      <div className="playerGrabber">
+                        {!isFirstPlayer && (
+                          <GripVertical size={16} className="playerGripIcon" />
+                        )}
                       </div>
                     )}
+                    <span className="playerName">{x.player.name}</span>
+                    <div className="playerActions">
+                      {me.id === x.player.id && (
+                        <Button
+                          variant="link"
+                          className="textLink"
+                          onClick={() => setShowEditPlayerUI(true)}
+                        >
+                          edit
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
             })}
+            {/* Always render end-of-list insertion indicator to reserve space */}
+            <div
+              className={classNames("insertionIndicator", {
+                active:
+                  dragOverIndex === game?.playerRoundInfo.length &&
+                  draggedPlayerIndex !== null,
+              })}
+            />
           </Stack>
         </Stack>
       )}
