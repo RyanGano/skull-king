@@ -196,6 +196,7 @@ public record Game
       Hash = GetHashCode().ToString(),
       Status = Status,
       PlayerRoundInfo = PlayerRoundInfo.Select(x => x.MapToDto()).ToList(),
+      IsRandomBid = this.IsRandomBid,
     };
   }
 

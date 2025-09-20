@@ -7,6 +7,7 @@ import Dropdown from "react-bootstrap/Dropdown";
 import { calculateRoundScore } from "./utils";
 
 import "./PlayerStatusCard.less";
+import { TutorialContext } from "../../TutorialContext";
 
 interface BonusOption {
   id: string;
@@ -48,6 +49,7 @@ export interface PlayerStatusCardProps {
   turnPhase: GameStatus;
   onBidChange?: (newBid: number) => void;
   onScoreChange?: (taken: number, bonus: number) => void;
+  onTutorialContextChanged?: (context: TutorialContext) => void;
 }
 
 export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
@@ -59,6 +61,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
     onScoreChange,
     turnPhase,
     myPlace,
+    onTutorialContextChanged,
   } = props;
   const [showBidUI, setShowBidUI] = useState<boolean>(false);
   const [showScoreUI, setShowScoreUI] = useState<boolean>(false);
@@ -330,7 +333,10 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
           })}
           onClick={() =>
             onBidChange
-              ? setShowBidUI(true)
+              ? (() => {
+                  setShowBidUI(true);
+                  onTutorialContextChanged?.(TutorialContext.bidding);
+                })()
               : onScoreChange
               ? setShowScoreUI(true)
               : undefined
@@ -362,15 +368,15 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
 
             {/* Bid hasn't been entered by this player yet. */}
             {turnPhase === GameStatus.biddingOpen &&
-              currentRound.bid === null && <h5>{`Bid: ...`}</h5>}
+              currentRound.bid === null && <span>{`Bid:`}</span>}
             {/* Bid has been entered (only show if it's my bid). */}
             {turnPhase === GameStatus.biddingOpen &&
               currentRound.bid !== null && (
-                <h5>{`Bid: ${isMe ? currentRound.bid ?? 0 : "?"}`}</h5>
+                <span>{`Bid: ${isMe ? currentRound.bid ?? 0 : "READY"}`}</span>
               )}
             {/* All bids are public and round is starting. */}
             {turnPhase === GameStatus.biddingClosed && (
-              <h5>{`Bid: ${currentRound.bid ?? 0}`}</h5>
+              <span>{`Bid: ${currentRound.bid ?? 0}`}</span>
             )}
           </Stack>
         </div>

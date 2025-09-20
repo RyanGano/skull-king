@@ -1,25 +1,29 @@
 import { Button, Stack } from "react-bootstrap";
 import classNames from "classnames";
 import { Game, GameDifficulty, GameStatus, Player } from "../../types/game";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { SimpleModal } from "../../common/simple-modal";
 import { TextInputArea } from "../../common/input-area/text-input-area";
 
 import "./GameInfo.less";
+import { TutorialContext } from "../../TutorialContext";
 
 export interface GameInfoProps {
   game: Game | null;
   me: Player;
-  editMyName: (name: string) => void;
-  startGame?: (randomBids: boolean, gameDifficulty: GameDifficulty) => void;
+  editMyName: (name: string) => Promise<void>;
+  startGame?: (
+    randomBids: boolean,
+    gameDifficulty: GameDifficulty
+  ) => Promise<void>;
+  onTutorialContextChanged?: (context: TutorialContext) => void;
 }
 
 export const GameInfo = (props: GameInfoProps) => {
-  const { game, me, editMyName, startGame } = props;
+  const { game, me, editMyName, startGame, onTutorialContextChanged } = props;
   const [showEditPlayerUI, setShowEditPlayerUI] = useState<boolean>(false);
   const [myUpdatedName, setMyUpdatedName] = useState<string>();
   const [showRandomBidPopup, setShowRandomBidPopup] = useState<boolean>(false);
-  const [difficulty, setDifficulty] = useState<GameDifficulty>();
 
   const getEditPlayerNameUI = () => {
     return (
@@ -46,22 +50,52 @@ export const GameInfo = (props: GameInfoProps) => {
           ? "Medium"
           : "Hard";
 
+      const difficultyClass =
+        buttonDifficulty == GameDifficulty.Easy
+          ? "easy-button"
+          : buttonDifficulty == GameDifficulty.Medium
+          ? "medium-button"
+          : "hard-button";
+
       return (
         <div
           key={difficultyTitle}
-          className={classNames("numberDisplayBackground", {
-            ["selected"]: difficulty === buttonDifficulty,
-          })}
+          className={classNames("numberDisplayBackground", difficultyClass)}
           onClick={() => {
-            setDifficulty(buttonDifficulty);
+            startGame!(true, buttonDifficulty);
+            setShowRandomBidPopup(false);
+            // Close the tutorial since the user has completed the auto-bid setup
+            onTutorialContextChanged?.(TutorialContext.inGame);
           }}
         >
           <div className="numberDisplayContainer">{difficultyTitle}</div>
         </div>
       );
     },
-    [difficulty]
+    [startGame, onTutorialContextChanged]
   );
+
+  // Show tutorial when startGame buttons are available (user can start the game)
+  useEffect(() => {
+    console.log("GameInfo: startGame prop changed:", !!startGame);
+    if (startGame) {
+      console.log(
+        "GameInfo: Calling onTutorialContextChanged with startGameOptions"
+      );
+      onTutorialContextChanged?.(TutorialContext.startGameOptions);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startGame]); // onTutorialContextChanged is stable (memoized) so omitted
+
+  // Show tutorial when auto bid popup is opened
+  useEffect(() => {
+    if (showRandomBidPopup) {
+      console.log(
+        "GameInfo: Calling onTutorialContextChanged with startingAutoBid"
+      );
+      onTutorialContextChanged?.(TutorialContext.startingAutoBid);
+    }
+  }, [showRandomBidPopup, onTutorialContextChanged]);
 
   const getRandomBidStartUI = () => {
     const buttons = [
@@ -73,16 +107,13 @@ export const GameInfo = (props: GameInfoProps) => {
     return (
       <Stack>
         <span>
-          Random Bid Game: A game where the site picks a bid for each player. It
-          is then each player's goal to match the bid with the cards they have.
-          This will likely be a faster version of the game because you're not
-          focusing on what to bid, but how to get your bid. It can also be a
-          funny version of the game as a player may find that they are supposed
-          to take six out of seven tricks with only low cards. If you're playing
-          with only two players, a third "Ghost Player" will be added for you.
-          Don't worry about updating the score for this player.
+          Arrr! In this mode, the system draws yer bids from a hat, ye scurvy
+          dogs! Focus on playin' yer cards wisely to match whatever lot ye've
+          drawn. Faster games, wilder laughs, and sometimes ye'll be chasin' the
+          Kraken with naught but bilge rats in yer hand! Two players? We'll add
+          a ghost mate fer ye - no scorin' needed fer that phantom swab.
         </span>
-        <p>Choose your difficulty</p>
+        <p>Choose yer difficulty</p>
         <div className="wrappingContainer">{buttons}</div>
       </Stack>
     );
@@ -105,18 +136,14 @@ export const GameInfo = (props: GameInfoProps) => {
         <SimpleModal
           title={"Auto (Random) Bid"}
           content={getRandomBidStartUI()}
-          defaultButtonContent={"Start"}
-          alternateButtonContent={"Cancel"}
-          onAccept={() => {
-            startGame(true, difficulty ?? GameDifficulty.Easy);
-            setShowRandomBidPopup(false);
-          }}
+          defaultButtonContent={"Cancel"}
+          onAccept={() => setShowRandomBidPopup(false)}
           onCancel={() => setShowRandomBidPopup(false)}
           show={showRandomBidPopup}
         />
       )}
       {game?.status === GameStatus.acceptingPlayers && (
-        <span>Game ID: {game?.id}</span>
+        <span className="gameIdDisplay">Game ID: {game?.id}</span>
       )}
       {game?.status === GameStatus.acceptingPlayers && (
         <Stack direction="horizontal" gap={3} className="playerList">
@@ -143,7 +170,7 @@ export const GameInfo = (props: GameInfoProps) => {
       )}
       {startGame && (
         <Button
-          className="buttonStyle"
+          className="buttonStyle start-game-button"
           onClick={() => startGame(false, GameDifficulty.Easy)}
         >
           Start Game
@@ -151,7 +178,7 @@ export const GameInfo = (props: GameInfoProps) => {
       )}
       {startGame && (
         <Button
-          className="buttonStyle"
+          className="buttonStyle auto-bid-button"
           onClick={() => setShowRandomBidPopup(true)}
         >
           Start Game with Auto Bid

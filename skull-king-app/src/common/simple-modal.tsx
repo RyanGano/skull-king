@@ -12,6 +12,7 @@ export interface SimpleModalProps {
   show: boolean;
   centered?: boolean;
   fullScreen?: boolean;
+  backdrop?: boolean | "static";
 }
 
 export const SimpleModal = (props: SimpleModalProps) => {
@@ -26,6 +27,7 @@ export const SimpleModal = (props: SimpleModalProps) => {
     show,
     centered,
     fullScreen,
+    backdrop = true,
   } = props;
   return (
     <div>
@@ -40,6 +42,7 @@ export const SimpleModal = (props: SimpleModalProps) => {
         onHide={onCancel}
         centered={centered ?? true}
         fullscreen={fullScreen ?? true ? "sm-down" : ""}
+        backdrop={backdrop}
       >
         <Modal.Header closeButton>
           <Modal.Title>{title}</Modal.Title>
@@ -47,7 +50,7 @@ export const SimpleModal = (props: SimpleModalProps) => {
         <Modal.Body>{content}</Modal.Body>
         <Modal.Footer>
           {alternateButtonContent && (
-            <Button variant="secondary" onClick={onCancel}>
+            <Button variant="outline-secondary" onClick={onCancel}>
               {alternateButtonContent}
             </Button>
           )}

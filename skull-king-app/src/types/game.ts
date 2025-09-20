@@ -29,6 +29,7 @@ export type Game = {
   status: GameStatus;
   playerRoundInfo: PlayerRounds[];
   hash: string;
+  isRandomBid?: boolean;
 };
 
 export type PlayerRounds = {

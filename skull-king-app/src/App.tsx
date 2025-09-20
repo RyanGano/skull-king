@@ -2,12 +2,14 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import Stack from "react-bootstrap/esm/Stack";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { QuestionCircle } from "react-bootstrap-icons";
 import {
   callGetRoute,
   callPostRoute,
   callPutRoute,
   callDeleteRoute,
 } from "./utils/api-utils";
+import { getCookie, setCookie } from "./utils/cookie-utils";
 import {
   AddPlayerUri,
   CreateNewGameUri,
@@ -25,9 +27,11 @@ import { PlayArea } from "./components/PlayArea";
 import { GameInfo } from "./components/GameInfo";
 import { GameSetup } from "./components/GameSetup";
 import { SimpleModal } from "./common/simple-modal";
+import { Tutorial } from "./components/Tutorial";
 import classNames from "classnames";
 import { NavLink } from "react-bootstrap";
 import { Button } from "react-bootstrap";
+import { TutorialContext } from "./TutorialContext";
 
 const App = () => {
   const navigate = useNavigate();
@@ -46,6 +50,17 @@ const App = () => {
   const [showGameEndedMessage, setShowGameEndedMessage] = useState(false);
   const [gameEndedAt, setGameEndedAt] = useState<Date | null>(null);
   const [showRestartButtons, setShowRestartButtons] = useState(false);
+  // Controls whether tutorial content is currently visible on screen
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialContext, setTutorialContext] = useState<TutorialContext>(
+    TutorialContext.home
+  );
+  // Global setting that controls whether tutorial mode is enabled (affects auto-showing tutorials)
+  const [tutorialMode, setTutorialMode] = useState(false);
+  const [seenTutorialContexts, setSeenTutorialContexts] = useState<
+    Set<TutorialContext>
+  >(new Set());
+  const [showTutorialPrompt, setShowTutorialPrompt] = useState(false);
 
   useEffect(() => {
     if (hasWarmedUp) {
@@ -63,6 +78,16 @@ const App = () => {
     warmUp();
   }, [hasWarmedUp]);
 
+  // Check if user has seen the tutorial prompt on app load
+  useEffect(() => {
+    if (hasWarmedUp) {
+      const hasSeenTutorialPrompt = getCookie("skullKingTutorialPromptSeen");
+      if (!hasSeenTutorialPrompt) {
+        setShowTutorialPrompt(true);
+      }
+    }
+  }, [hasWarmedUp]);
+
   useEffect(() => {
     currentHashRef.current = game?.hash;
   }, [game?.hash]);
@@ -77,6 +102,121 @@ const App = () => {
       setShowRestartButtons(false);
     }
   }, [gameEndedAt, game?.status]);
+
+  useEffect(() => {
+    if (setupOpen && showTutorial) {
+      // When setup modal opens and tutorial is active, determine context
+      // This logic would need to be expanded based on which modal is open
+      setTutorialContext(TutorialContext.createGame);
+    }
+  }, [setupOpen, showTutorial]);
+
+  const tutorialContextRef = useRef(tutorialContext);
+
+  // Keep the ref in sync with the state
+  useEffect(() => {
+    tutorialContextRef.current = tutorialContext;
+  }, [tutorialContext]);
+
+  const captainId = game?.playerRoundInfo?.[0]?.player?.id;
+
+  useEffect(() => {
+    if (
+      game &&
+      tutorialContextRef.current !== TutorialContext.startGameOptions &&
+      tutorialContextRef.current !== TutorialContext.startingAutoBid
+    ) {
+      // Update tutorial context based on game status
+      let newContext: TutorialContext = TutorialContext.inGame;
+      let shouldShowTutorial = false;
+
+      switch (game.status) {
+        case GameStatus.acceptingPlayers:
+          newContext = TutorialContext.inGame;
+          // Show tutorial for waiting room (only if tutorial mode is on and not seen)
+          shouldShowTutorial =
+            tutorialMode && !seenTutorialContexts.has(TutorialContext.inGame);
+          break;
+        case GameStatus.biddingOpen:
+        case GameStatus.biddingClosed:
+        case GameStatus.gameOver:
+          if (game.status === GameStatus.biddingOpen) {
+            newContext = TutorialContext.bidding;
+            shouldShowTutorial =
+              tutorialMode &&
+              !seenTutorialContexts.has(TutorialContext.bidding);
+          } else {
+            newContext = TutorialContext.playing;
+            shouldShowTutorial =
+              tutorialMode &&
+              !seenTutorialContexts.has(TutorialContext.playing);
+          }
+          break;
+        default:
+          newContext = TutorialContext.inGame;
+      }
+
+      // Only update context if it's different to avoid unnecessary re-renders
+      if (newContext !== tutorialContextRef.current) {
+        // If we're currently showing a tutorial and the context is changing,
+        // mark the current context as seen and hide the tutorial
+        if (
+          showTutorial &&
+          tutorialContextRef.current !== TutorialContext.inGame
+        ) {
+          setSeenTutorialContexts((prev) =>
+            new Set(prev).add(tutorialContextRef.current)
+          );
+          setShowTutorial(false);
+        }
+        setTutorialContext(newContext);
+      }
+
+      // Auto-show tutorial for relevant game states if not already showing and tutorial mode is on
+      // and tutorial hasn't been seen
+      if (
+        shouldShowTutorial &&
+        !showTutorial &&
+        !seenTutorialContexts.has(newContext)
+      ) {
+        setShowTutorial(true);
+        setSeenTutorialContexts((prev) => new Set(prev).add(newContext));
+      }
+    }
+  }, [
+    game?.status,
+    game?.playerRoundInfo?.length,
+    game?.isRandomBid,
+    captainId,
+    game,
+    tutorialMode,
+    seenTutorialContexts,
+    showTutorial,
+    me?.id,
+  ]);
+
+  // Handle startGameOptions, bidding, playing, and startingAutoBid tutorial contexts - show regardless of tutorial mode
+  useEffect(() => {
+    if (
+      (tutorialContext === TutorialContext.startGameOptions ||
+        tutorialContext === TutorialContext.bidding ||
+        tutorialContext === TutorialContext.playing ||
+        tutorialContext === TutorialContext.startingAutoBid) &&
+      !seenTutorialContexts.has(tutorialContext)
+    ) {
+      setShowTutorial(true);
+      setSeenTutorialContexts((prev) => new Set(prev).add(tutorialContext));
+    }
+  }, [tutorialContext, seenTutorialContexts]);
+  useEffect(() => {
+    if (
+      !tutorialMode &&
+      showTutorial &&
+      tutorialContext !== TutorialContext.startGameOptions
+    ) {
+      setShowTutorial(false);
+    }
+  }, [tutorialMode, showTutorial, tutorialContext]);
 
   const updateGame = useCallback(
     async (id: string, currentHash: string) => {
@@ -239,6 +379,9 @@ const App = () => {
         startUpdateTimer(gameData.id, gameData.hash);
         // Navigate to the game URL with player ID
         navigate(`/${gameData.id}/${player!.id}`);
+
+        // Show tutorial for newly created game
+        setTutorialContext(TutorialContext.inGame);
       }
     },
     [navigate, startUpdateTimer]
@@ -271,6 +414,9 @@ const App = () => {
           startUpdateTimer(gameId, gameData.hash);
           // Navigate to the game URL with player ID
           navigate(`/${gameId}/${player.id}`);
+
+          // Show tutorial for joined game
+          setTutorialContext(TutorialContext.inGame);
         }
       }
     },
@@ -296,6 +442,13 @@ const App = () => {
       }
     },
     [game?.id, me, updateGame]
+  );
+
+  const handleTutorialContextChanged = useCallback(
+    (context: TutorialContext) => {
+      setTutorialContext(context);
+    },
+    []
   );
 
   const startGame = useCallback(
@@ -444,6 +597,7 @@ const App = () => {
         show={showExitPopup}
         centered={false}
         fullScreen={false}
+        backdrop={showTutorial ? false : true}
       />
       <Stack gap={2}>
         <GameInfo
@@ -457,6 +611,7 @@ const App = () => {
               ? startGame
               : undefined
           }
+          onTutorialContextChanged={handleTutorialContextChanged}
         />
         <GameSetup
           createGame={!game && !urlGameId ? createGame : undefined}
@@ -464,6 +619,16 @@ const App = () => {
           defaultGameId={urlGameId}
           playerId={urlPlayerId}
           onSetupModalChanged={(open: boolean) => setSetupOpen(open)}
+          showTutorial={showTutorial}
+          onTutorialContextChanged={(context: TutorialContext) => {
+            if (showTutorial) {
+              setTutorialContext(context);
+            } else {
+              // If tutorial is not showing but user is interacting with tutorial-enabled elements,
+              // we could optionally show it here, but for now let's keep it as-is
+              setTutorialContext(context);
+            }
+          }}
         />
         {game && game?.status !== GameStatus.acceptingPlayers && (
           <div>
@@ -476,6 +641,7 @@ const App = () => {
               getCurrentHash={() => getCurrentHash(game.id)}
               showRestartButtons={showRestartButtons}
               onRestartGame={restartGame}
+              onTutorialContextChanged={handleTutorialContextChanged}
             />
             <div style={{ height: 75 }} />
           </div>
@@ -582,7 +748,82 @@ const App = () => {
           </NavLink>
         </div>
         <span style={{ marginLeft: 4 }}>card game.</span>
+        <div
+          className="tutorial-toggle"
+          onClick={() => {
+            if (tutorialMode) {
+              // If tutorial mode is on, turn it off
+              setTutorialMode(false);
+              setShowTutorial(false);
+            } else {
+              // If tutorial mode is off, show the enable popup
+              setShowTutorialPrompt(true);
+            }
+          }}
+          title={
+            tutorialMode
+              ? "Click to disable tutorial hints"
+              : "Click to enable tutorial hints"
+          }
+        >
+          <QuestionCircle
+            size={20}
+            color={tutorialMode ? "#ffd700" : "#666"}
+            style={{ cursor: "pointer", marginLeft: "12px" }}
+          />
+        </div>
       </div>
+      <Tutorial
+        show={showTutorialPrompt}
+        onClose={() => {
+          setShowTutorialPrompt(false);
+          // Set cookie to remember they've seen the prompt
+          setCookie("skullKingTutorialPromptSeen", "true");
+        }}
+        onComplete={() => {
+          setTutorialMode(true);
+          setShowTutorialPrompt(false);
+          setShowTutorial(true);
+          setTutorialContext(TutorialContext.home);
+          setSeenTutorialContexts(new Set()); // Reset seen contexts for fresh tutorial experience
+          // Set cookie to remember they've seen the prompt
+          setCookie("skullKingTutorialPromptSeen", "true");
+        }}
+        context={TutorialContext.initialPrompt}
+        playerCount={game?.playerRoundInfo?.length}
+        isCaptain={game?.playerRoundInfo?.[0].player.id === me?.id}
+        isRandomBid={game?.isRandomBid}
+      />
+      <Tutorial
+        show={showTutorial}
+        onClose={() => {
+          setShowTutorial(false);
+          setSeenTutorialContexts((prev) => new Set(prev).add(tutorialContext));
+          // Reset context back to inGame when tutorial is closed
+          if (
+            tutorialContext === TutorialContext.startGameOptions ||
+            tutorialContext === TutorialContext.startingAutoBid
+          ) {
+            setTutorialContext(TutorialContext.inGame);
+          }
+        }}
+        onComplete={() => {
+          setShowTutorial(false);
+          // Mark this tutorial context as completed/permanently seen
+          setSeenTutorialContexts((prev) => new Set(prev).add(tutorialContext));
+          // Reset context back to inGame when tutorial is completed
+          if (
+            tutorialContext === TutorialContext.startGameOptions ||
+            tutorialContext === TutorialContext.startingAutoBid
+          ) {
+            setTutorialContext(TutorialContext.inGame);
+          }
+        }}
+        context={tutorialContext}
+        playerCount={game?.playerRoundInfo?.length}
+        isCaptain={game?.playerRoundInfo?.[0].player.id === me?.id}
+        isRandomBid={game?.isRandomBid}
+      />
     </div>
   );
 };

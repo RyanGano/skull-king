@@ -1,3 +1,17 @@
+// Variables
+@banner-width: 300px;
+@button-height: 50px;
+@container-width: 75%;
+@position-top: 47%;
+
+// Mixins
+.centered-absolute() {
+  position: absolute;
+  top: @position-top;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
 .gameSetupContainer {
   display: flex;
   justify-content: center;
@@ -9,22 +23,19 @@
 }
 
 .bannerImage {
-  width: 300px;
+  width: @banner-width;
   height: auto;
 }
 
 .buttonsContainer {
-  position: absolute;
-  top: 47%;
-  left: 50%;
-   width: 75%;
-  transform: translate(-50%, -50%);
+  .centered-absolute();
+  width: @container-width;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
 .gameButton {
-  height: 50px;
+  height: @button-height;
   cursor: pointer;
 }

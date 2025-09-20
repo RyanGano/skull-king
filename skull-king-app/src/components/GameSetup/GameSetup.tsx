@@ -7,18 +7,33 @@ import "./GameSetup.less";
 import { callGetRoute } from "../../utils/api-utils";
 import { GameGetSingleGameIdUri, GetGameUri } from "../../service-paths";
 import { GameStatus } from "../../types/game";
+import { TutorialContext } from "../../TutorialContext";
 
 interface GameSetupProps {
-  createGame?: (playerName: string) => void;
-  joinGame?: (gameId: string, playerName: string) => void;
+  createGame?: (playerName: string) => Promise<void>;
+  joinGame?: (gameId: string, playerName: string) => Promise<void>;
   defaultGameId?: string;
   playerId?: string;
   onSetupModalChanged?: (open: boolean) => void;
+  onTutorialContextChanged?: (
+    context:
+      | TutorialContext.home
+      | TutorialContext.createGame
+      | TutorialContext.joinGame
+  ) => void;
+  showTutorial?: boolean;
 }
 
 export const GameSetup = (props: GameSetupProps) => {
-  const { createGame, joinGame, defaultGameId, playerId, onSetupModalChanged } =
-    props;
+  const {
+    createGame,
+    joinGame,
+    defaultGameId,
+    playerId,
+    onSetupModalChanged,
+    onTutorialContextChanged,
+    showTutorial = false,
+  } = props;
   const [showCreateGameUI, setShowCreateGameUI] = useState<boolean>(false);
   const [showJoinGameUI, setShowJoinGameUI] = useState<boolean>(false);
   const [showGameNotFoundUI, setShowGameNotFoundUI] = useState<boolean>(false);
@@ -26,17 +41,12 @@ export const GameSetup = (props: GameSetupProps) => {
     useState<boolean>(false);
   const [gameId, setGameId] = useState<string | undefined>();
   const [playerName, setPlayerName] = useState<string | undefined>();
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastCheckedPathRef = useRef<string | null>(null);
 
   const checkForId = useCallback(async () => {
     const result = await callGetRoute(GameGetSingleGameIdUri());
     if (result.status === 200) {
       setGameId(result.data);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
     }
   }, []);
 
@@ -51,7 +61,8 @@ export const GameSetup = (props: GameSetupProps) => {
   const openCreateUI = useCallback(() => {
     setShowCreateGameUI(true);
     notifySetupChanged(true);
-  }, [notifySetupChanged]);
+    onTutorialContextChanged?.(TutorialContext.createGame);
+  }, [notifySetupChanged, onTutorialContextChanged]);
 
   const closeCreateUI = useCallback(() => {
     setShowCreateGameUI(false);
@@ -61,7 +72,11 @@ export const GameSetup = (props: GameSetupProps) => {
   const openJoinUI = useCallback(() => {
     setShowJoinGameUI(true);
     notifySetupChanged(true);
-  }, [notifySetupChanged]);
+    onTutorialContextChanged?.(TutorialContext.joinGame);
+    if (!defaultGameId) {
+      checkForId();
+    }
+  }, [notifySetupChanged, onTutorialContextChanged, defaultGameId, checkForId]);
 
   const closeJoinUI = useCallback(() => {
     setShowJoinGameUI(false);
@@ -115,17 +130,6 @@ export const GameSetup = (props: GameSetupProps) => {
     validateAndShowGame();
   }, [defaultGameId, playerId, notifySetupChanged]);
 
-  useEffect(() => {
-    if (timerRef?.current) {
-      return;
-    }
-
-    checkForId();
-    timerRef.current = setInterval(() => {
-      checkForId();
-    }, 1000);
-  }, [checkForId]);
-
   // create UI
   const getCreateGameUI = () => {
     return (
@@ -146,20 +150,22 @@ export const GameSetup = (props: GameSetupProps) => {
     );
   };
 
-  // join UI: Game Id field (auto uppercase) then name field. If defaultGameId exists,
-  // we focus the name field so user can immediately type their name.
+  // join UI: Game Id field (auto uppercase) then name field. If defaultGameId or gameId exists,
+  // we display it; otherwise, show input for gameId.
   const getJoinGameUI = () => {
+    const displayGameId = defaultGameId ?? gameId;
     return (
       <Stack gap={2}>
-        {defaultGameId ? (
+        {displayGameId ? (
           <div
+            className="gameIdDisplay"
             style={{ fontSize: "1.2rem", color: "#000", padding: "0.375rem 0" }}
           >
-            Game ID: {defaultGameId}
+            Game ID: {displayGameId}
           </div>
         ) : (
           <TextInputArea
-            startingValue={defaultGameId ?? gameId}
+            startingValue={gameId}
             setNewValue={(newValue) => setGameId(newValue)}
             placeholder="Game Id"
             inputFormatter={(textWithSelection) => ({
@@ -175,8 +181,8 @@ export const GameSetup = (props: GameSetupProps) => {
                 closeJoinUI();
               }
             }}
-            isValid={((defaultGameId ?? gameId)?.length ?? 0) === 4}
-            autoFocus={!defaultGameId}
+            isValid={(gameId?.length ?? 0) === 4}
+            autoFocus={true}
           />
         )}
 
@@ -186,15 +192,15 @@ export const GameSetup = (props: GameSetupProps) => {
           placeholder="Enter your name"
           onEnter={(entered) => {
             const name = entered ?? playerName;
-            const gid = gameId ?? defaultGameId;
+            const gid = displayGameId ?? gameId;
             if ((gid?.length ?? 0) === 4 && (name?.length ?? 0) > 0) {
               joinGame?.(gid!, name!);
               closeJoinUI();
             }
           }}
           isValid={(playerName?.length ?? 0) > 0}
-          // if defaultGameId exists (we came via link) focus name
-          autoFocus={!!defaultGameId}
+          // if gameId is displayed, focus name
+          autoFocus={!!displayGameId}
         />
       </Stack>
     );
@@ -249,6 +255,7 @@ export const GameSetup = (props: GameSetupProps) => {
             show={true}
             centered={false}
             fullScreen={false}
+            backdrop={showTutorial ? false : true}
           />
         )}
 
@@ -271,6 +278,7 @@ export const GameSetup = (props: GameSetupProps) => {
             show={true}
             centered={false}
             fullScreen={false}
+            backdrop={showTutorial ? false : true}
           />
         )}
 
@@ -289,6 +297,7 @@ export const GameSetup = (props: GameSetupProps) => {
             show={true}
             centered={false}
             fullScreen={false}
+            backdrop={showTutorial ? false : true}
             onCancel={() => {
               setShowGameCannotJoinUI(false);
               setGameId(undefined);
@@ -313,6 +322,7 @@ export const GameSetup = (props: GameSetupProps) => {
             show={true}
             centered={false}
             fullScreen={false}
+            backdrop={showTutorial ? false : true}
             onCancel={() => {
               setShowGameCannotJoinUI(false);
               setGameId(undefined);

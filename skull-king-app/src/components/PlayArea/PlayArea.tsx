@@ -8,16 +8,18 @@ import { GameSetBidUri, GameSetScoreUri } from "../../service-paths";
 import { callGetRoute } from "../../utils/api-utils";
 import { useCallback, useEffect, useState } from "react";
 import { Spinner } from "react-bootstrap";
+import { TutorialContext } from "../../TutorialContext";
 
 interface PlayAreaProps {
   game: Game;
   me: Player;
-  moveToNextGameStatus: () => void;
-  moveToPreviousGameStatus: () => void;
+  moveToNextGameStatus: (hash?: string) => Promise<void>;
+  moveToPreviousGameStatus: (hash?: string) => Promise<void>;
   gameChanging: boolean;
   getCurrentHash: () => Promise<string>;
   showRestartButtons?: boolean;
-  onRestartGame?: () => void;
+  onRestartGame?: () => Promise<void>;
+  onTutorialContextChanged?: (context: TutorialContext) => void;
 }
 
 export const PlayArea = (props: PlayAreaProps) => {
@@ -30,6 +32,7 @@ export const PlayArea = (props: PlayAreaProps) => {
     getCurrentHash,
     showRestartButtons,
     onRestartGame,
+    onTutorialContextChanged,
   } = props;
   const [changingGame, setChangingGame] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
@@ -191,6 +194,7 @@ export const PlayArea = (props: PlayAreaProps) => {
                   : undefined
               }
               dealer={x.player.id === dealerId}
+              onTutorialContextChanged={onTutorialContextChanged}
             />
           </div>
         ))}
