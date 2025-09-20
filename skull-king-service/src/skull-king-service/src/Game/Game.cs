@@ -70,6 +70,8 @@ public record Game
       throw new ArgumentException("Cannot change player order at this time");
     if (distinctPlayers.First() != EditablePlayerRoundInfo.First().Player!.Id)
       throw new ArgumentException("First player in new order must match first player in current order");
+    if (EditablePlayerRoundInfo.Count <= 2)
+      throw new ArgumentException("Cannot reorder players when there are 2 or fewer players");
 
     var playerIds = EditablePlayerRoundInfo.Select(y => y.Player!.Id).ToList();
     PlayerOrder = newPlayerOrder.Select(x => playerIds.IndexOf(x).ToString()).Aggregate((a, b) => $"{a}{b}");

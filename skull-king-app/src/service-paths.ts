@@ -13,6 +13,7 @@ const GameMovePreviousPhaseInternal = `${BaseGameUriInternal}/GAME_ID/moveprevio
 const GameSetBidInternal = `${BaseGameUriInternal}/GAME_ID/setbid?playerId=PLAYER_ID&bid=BID&knownHash=KNOWN_HASH`;
 const GameSetScoreInternal = `${BaseGameUriInternal}/GAME_ID/setscore?playerId=PLAYER_ID&trickstaken=TRICKS_TAKEN&bonus=BONUS&knownHash=KNOWN_HASH`;
 const GameRemovePlayerInternal = `${BaseGameUriInternal}/GAME_ID/players/PLAYER_ID?knownHash=KNOWN_HASH`;
+const GameReorderPlayersInternal = `${BaseGameUriInternal}/GAME_ID/players/reorder`;
 const GameGetSingleGameIdInternal = `${BaseGameUriInternal}/getid`;
 
 const CurrentBaseUri = import.meta.env.VITE_REACT_APP_BASE_SERVICE_URI;
@@ -154,6 +155,12 @@ export function GameRemovePlayerUri(
     { key: "GAME_ID", value: gameId },
     { key: "PLAYER_ID", value: playerId },
     { key: "KNOWN_HASH", value: currentHash },
+  ]);
+}
+
+export function GameReorderPlayersUri(gameId: string) {
+  return formatUriString(GameReorderPlayersInternal, [
+    { key: "GAME_ID", value: gameId },
   ]);
 }
 

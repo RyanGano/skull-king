@@ -1,5 +1,6 @@
 import { Button, Stack } from "react-bootstrap";
 import classNames from "classnames";
+import { ChevronUp, ChevronDown } from "react-bootstrap-icons";
 import { Game, GameDifficulty, GameStatus, Player } from "../../types/game";
 import { useCallback, useEffect, useState } from "react";
 import { SimpleModal } from "../../common/simple-modal";
@@ -12,6 +13,7 @@ export interface GameInfoProps {
   game: Game | null;
   me: Player;
   editMyName: (name: string) => Promise<void>;
+  reorderPlayers?: (playerOrder: string[]) => Promise<void>;
   startGame?: (
     randomBids: boolean,
     gameDifficulty: GameDifficulty
@@ -20,7 +22,14 @@ export interface GameInfoProps {
 }
 
 export const GameInfo = (props: GameInfoProps) => {
-  const { game, me, editMyName, startGame, onTutorialContextChanged } = props;
+  const {
+    game,
+    me,
+    editMyName,
+    reorderPlayers,
+    startGame,
+    onTutorialContextChanged,
+  } = props;
   const [showEditPlayerUI, setShowEditPlayerUI] = useState<boolean>(false);
   const [myUpdatedName, setMyUpdatedName] = useState<string>();
   const [showRandomBidPopup, setShowRandomBidPopup] = useState<boolean>(false);
@@ -73,6 +82,42 @@ export const GameInfo = (props: GameInfoProps) => {
       );
     },
     [startGame, onTutorialContextChanged]
+  );
+
+  const movePlayerUp = useCallback(
+    (playerIndex: number) => {
+      if (!game?.playerRoundInfo || playerIndex <= 1) return; // Can't move first player or if already at top (after first)
+
+      const newOrder = [...game.playerRoundInfo];
+      [newOrder[playerIndex], newOrder[playerIndex - 1]] = [
+        newOrder[playerIndex - 1],
+        newOrder[playerIndex],
+      ];
+
+      const playerIds = newOrder.map((pri) => pri.player.id);
+      reorderPlayers?.(playerIds);
+    },
+    [game?.playerRoundInfo, reorderPlayers]
+  );
+
+  const movePlayerDown = useCallback(
+    (playerIndex: number) => {
+      if (
+        !game?.playerRoundInfo ||
+        playerIndex >= game.playerRoundInfo.length - 1
+      )
+        return; // Can't move last player
+
+      const newOrder = [...game.playerRoundInfo];
+      [newOrder[playerIndex], newOrder[playerIndex + 1]] = [
+        newOrder[playerIndex + 1],
+        newOrder[playerIndex],
+      ];
+
+      const playerIds = newOrder.map((pri) => pri.player.id);
+      reorderPlayers?.(playerIds);
+    },
+    [game?.playerRoundInfo, reorderPlayers]
   );
 
   // Show tutorial when startGame buttons are available (user can start the game)
@@ -149,22 +194,129 @@ export const GameInfo = (props: GameInfoProps) => {
         <Stack direction="horizontal" gap={3} className="playerList">
           <>Players:</>
           <Stack gap={2}>
-            {game?.playerRoundInfo.map((x) => (
-              <div key={x.player.id} className="playerDisplay">
-                {x.player.name}
-                {me.id === x.player.id ? (
-                  <Button
-                    variant="link"
-                    className={"textLink"}
-                    onClick={() => setShowEditPlayerUI(true)}
+            {game?.playerRoundInfo.map((x, index) => {
+              const isCaptain = game.playerRoundInfo[0].player.id === me.id;
+              const canReorder = isCaptain && game.playerRoundInfo.length > 2;
+              const canMoveUp = canReorder && index > 1; // Can't move first player, and second player can't move up
+              const canMoveDown =
+                canReorder && index < game.playerRoundInfo.length - 1;
+              const isFirstPlayer = index === 0;
+
+              return (
+                <div
+                  key={x.player.id}
+                  className="playerDisplay"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%",
+                  }}
+                >
+                  <span style={{ flex: 1 }}>{x.player.name}</span>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
                   >
-                    edit
-                  </Button>
-                ) : (
-                  ""
-                )}
-              </div>
-            ))}
+                    {me.id === x.player.id && (
+                      <Button
+                        variant="link"
+                        className="textLink"
+                        onClick={() => setShowEditPlayerUI(true)}
+                      >
+                        edit
+                      </Button>
+                    )}
+                    {!isFirstPlayer && canReorder && (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "row",
+                          gap: "2px",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Button
+                          variant="link"
+                          size="sm"
+                          disabled={!canMoveUp}
+                          onClick={() => movePlayerUp(index)}
+                          style={{
+                            padding: "4px 6px",
+                            lineHeight: 1,
+                            border: "none",
+                            backgroundColor: "transparent",
+                            color: canMoveUp ? "#2c3e50" : "#adb5bd",
+                            opacity: canMoveUp ? 1 : 0.4,
+                            fontSize: "16px",
+                            fontWeight: "bold",
+                            minWidth: "24px",
+                            height: "24px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: canMoveUp ? "pointer" : "not-allowed",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (canMoveUp) {
+                              e.currentTarget.style.color = "#1a252f";
+                              e.currentTarget.style.transform = "scale(1.1)";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (canMoveUp) {
+                              e.currentTarget.style.color = "#2c3e50";
+                              e.currentTarget.style.transform = "scale(1)";
+                            }
+                          }}
+                        >
+                          <ChevronUp size={16} strokeWidth={2.5} />
+                        </Button>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          disabled={!canMoveDown}
+                          onClick={() => movePlayerDown(index)}
+                          style={{
+                            padding: "4px 6px",
+                            lineHeight: 1,
+                            border: "none",
+                            backgroundColor: "transparent",
+                            color: canMoveDown ? "#2c3e50" : "#adb5bd",
+                            opacity: canMoveDown ? 1 : 0.4,
+                            fontSize: "16px",
+                            fontWeight: "bold",
+                            minWidth: "24px",
+                            height: "24px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: canMoveDown ? "pointer" : "not-allowed",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (canMoveDown) {
+                              e.currentTarget.style.color = "#1a252f";
+                              e.currentTarget.style.transform = "scale(1.1)";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (canMoveDown) {
+                              e.currentTarget.style.color = "#2c3e50";
+                              e.currentTarget.style.transform = "scale(1)";
+                            }
+                          }}
+                        >
+                          <ChevronDown size={16} strokeWidth={2.5} />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </Stack>
         </Stack>
       )}

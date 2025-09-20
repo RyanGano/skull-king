@@ -16,6 +16,7 @@ import {
   EditPlayerUri,
   GameMoveNextPhaseUri,
   GameMovePreviousPhaseUri,
+  GameReorderPlayersUri,
   GameResetUri,
   GetGameUri,
   GetWarmupUri,
@@ -444,6 +445,37 @@ const App = () => {
     [game?.id, me, updateGame]
   );
 
+  const reorderPlayers = useCallback(
+    async (playerOrder: string[]) => {
+      if (!game?.id || !me?.id) {
+        console.log("No game or player id");
+        return;
+      }
+
+      const result = await callPutRoute(
+        GameReorderPlayersUri(game.id),
+        JSON.parse(
+          JSON.stringify({
+            playerOrder: playerOrder,
+            playerId: me.id,
+            knownHash: currentHashRef.current ?? "",
+          })
+        )
+      );
+
+      if (result.status !== 200) {
+        console.log(
+          "Error reordering players",
+          result.status,
+          result.statusText
+        );
+      } else {
+        updateGame(game.id, currentHashRef.current ?? "");
+      }
+    },
+    [game?.id, me?.id, updateGame]
+  );
+
   const handleTutorialContextChanged = useCallback(
     (context: TutorialContext) => {
       setTutorialContext(context);
@@ -604,6 +636,7 @@ const App = () => {
           game={game}
           me={me!}
           editMyName={editPlayerName}
+          reorderPlayers={reorderPlayers}
           startGame={
             game?.status === GameStatus.acceptingPlayers &&
             (game.playerRoundInfo?.length ?? 0) > 1 &&
