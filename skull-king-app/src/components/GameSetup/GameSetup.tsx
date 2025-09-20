@@ -271,7 +271,10 @@ export const GameSetup = (props: GameSetupProps) => {
               joinGame?.(gid, playerName!);
               closeJoinUI();
             }}
-            onCancel={() => closeJoinUI()}
+            onCancel={() => {
+              closeJoinUI();
+              window.location.href = "/";
+            }}
             allowAccept={
               !!playerName && (gameId ?? defaultGameId)?.length === 4
             }
@@ -332,7 +335,7 @@ export const GameSetup = (props: GameSetupProps) => {
           />
         )}
 
-        {createGame && joinGame && (
+        {joinGame && (
           <div className="gameSetupContainer">
             <div className="imageContainer">
               <img
@@ -342,10 +345,12 @@ export const GameSetup = (props: GameSetupProps) => {
               />
 
               <div className="buttonsContainer">
-                <div
-                  className="gameButton"
-                  onClick={() => openCreateUI()}
-                ></div>
+                {createGame && (
+                  <div
+                    className="gameButton"
+                    onClick={() => openCreateUI()}
+                  ></div>
+                )}
                 <div className="gameButton" onClick={() => openJoinUI()}></div>
               </div>
             </div>
