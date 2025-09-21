@@ -196,9 +196,10 @@ const App = () => {
     me?.id,
   ]);
 
-  // Handle startGameOptions, bidding, playing, and startingAutoBid tutorial contexts - show regardless of tutorial mode
+  // Handle startGameOptions, bidding, playing, and startingAutoBid tutorial contexts
   useEffect(() => {
     if (
+      tutorialMode &&
       (tutorialContext === TutorialContext.startGameOptions ||
         tutorialContext === TutorialContext.bidding ||
         tutorialContext === TutorialContext.playing ||
@@ -208,16 +209,12 @@ const App = () => {
       setShowTutorial(true);
       setSeenTutorialContexts((prev) => new Set(prev).add(tutorialContext));
     }
-  }, [tutorialContext, seenTutorialContexts]);
+  }, [tutorialContext, seenTutorialContexts, tutorialMode]);
   useEffect(() => {
-    if (
-      !tutorialMode &&
-      showTutorial &&
-      tutorialContext !== TutorialContext.startGameOptions
-    ) {
+    if (!tutorialMode && showTutorial) {
       setShowTutorial(false);
     }
-  }, [tutorialMode, showTutorial, tutorialContext]);
+  }, [tutorialMode, showTutorial]);
 
   const updateGame = useCallback(
     async (id: string, currentHash: string) => {

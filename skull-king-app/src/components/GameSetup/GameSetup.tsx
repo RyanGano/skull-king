@@ -40,6 +40,12 @@ export const GameSetup = (props: GameSetupProps) => {
   const [showGameCannotJoinUI, setShowGameCannotJoinUI] =
     useState<boolean>(false);
   const [gameId, setGameId] = useState<string | undefined>();
+  const [ignoreDefaultGameId, setIgnoreDefaultGameId] =
+    useState<boolean>(false);
+  const [userEnteredGameId, setUserEnteredGameId] = useState<
+    string | undefined
+  >();
+  const [joinError, setJoinError] = useState<string | undefined>();
   const [playerName, setPlayerName] = useState<string | undefined>();
   const lastCheckedPathRef = useRef<string | null>(null);
 
@@ -84,8 +90,43 @@ export const GameSetup = (props: GameSetupProps) => {
     setShowGameCannotJoinUI(false);
     // clear game id after closing so subsequent opens behave normally
     setGameId(undefined);
+    setIgnoreDefaultGameId(false);
+    setUserEnteredGameId(undefined);
+    setJoinError(undefined);
     notifySetupChanged(false);
   }, [notifySetupChanged]);
+
+  const validateAndJoinGame = useCallback(
+    async (gameId: string, playerName: string) => {
+      // Clear any previous error
+      setJoinError(undefined);
+      try {
+        const result = await callGetRoute(GetGameUri(gameId));
+        if (result.status === 200) {
+          const gameData = result.data;
+          if (gameData.status === GameStatus.acceptingPlayers) {
+            // Game exists and can be joined - proceed with join
+            setUserEnteredGameId(undefined);
+            setIgnoreDefaultGameId(false);
+            await joinGame?.(gameId, playerName);
+            closeJoinUI();
+          } else {
+            // Game exists but cannot be joined
+            setJoinError(
+              "This game is already in progress and cannot be joined."
+            );
+          }
+        } else {
+          // Game doesn't exist
+          setJoinError("Game not found. Please check the game ID.");
+        }
+      } catch (error) {
+        // Error loading game
+        setJoinError("Unable to check game status. Please try again.");
+      }
+    },
+    [joinGame, closeJoinUI]
+  );
 
   // Prefill game id when defaultGameId is provided and no playerId (meaning user needs to join)
   useEffect(() => {
@@ -150,13 +191,16 @@ export const GameSetup = (props: GameSetupProps) => {
     );
   };
 
-  // join UI: Game Id field (auto uppercase) then name field. If defaultGameId or gameId exists,
-  // we display it; otherwise, show input for gameId.
+  // join UI: Game Id field (auto uppercase) then name field. If gameId is pre-populated,
+  // we display it as non-editable; otherwise, show input for gameId.
   const getJoinGameUI = () => {
-    const displayGameId = defaultGameId ?? gameId;
+    const displayGameId = ignoreDefaultGameId
+      ? gameId
+      : defaultGameId ?? gameId;
     return (
       <Stack gap={2}>
-        {displayGameId ? (
+        {joinError && <div className="joinError">{joinError}</div>}
+        {gameId ? (
           <div
             className="gameIdDisplay"
             style={{ fontSize: "1.2rem", color: "#000", padding: "0.375rem 0" }}
@@ -165,23 +209,21 @@ export const GameSetup = (props: GameSetupProps) => {
           </div>
         ) : (
           <TextInputArea
-            startingValue={gameId}
-            setNewValue={(newValue) => setGameId(newValue)}
+            startingValue={userEnteredGameId}
+            setNewValue={(newValue) => setUserEnteredGameId(newValue)}
             placeholder="Game Id"
             inputFormatter={(textWithSelection) => ({
               ...textWithSelection,
               value: textWithSelection.value.toUpperCase(),
             })}
             onEnter={(entered) => {
-              const gid = (entered ?? gameId) as string | undefined;
+              const gid = (entered ?? userEnteredGameId) as string | undefined;
               // if gid and name present, join
               if ((gid?.length ?? 0) === 4 && (playerName?.length ?? 0) > 0) {
-                setGameId(undefined);
-                joinGame?.(gid!, playerName!);
-                closeJoinUI();
+                validateAndJoinGame(gid!, playerName!);
               }
             }}
-            isValid={(gameId?.length ?? 0) === 4}
+            isValid={(userEnteredGameId?.length ?? 0) === 4}
             autoFocus={true}
           />
         )}
@@ -192,10 +234,9 @@ export const GameSetup = (props: GameSetupProps) => {
           placeholder="Enter your name"
           onEnter={(entered) => {
             const name = entered ?? playerName;
-            const gid = displayGameId ?? gameId;
+            const gid = displayGameId ?? userEnteredGameId;
             if ((gid?.length ?? 0) === 4 && (name?.length ?? 0) > 0) {
-              joinGame?.(gid!, name!);
-              closeJoinUI();
+              validateAndJoinGame(gid!, name!);
             }
           }}
           isValid={(playerName?.length ?? 0) > 0}
@@ -265,18 +306,17 @@ export const GameSetup = (props: GameSetupProps) => {
             content={getJoinGameUI()}
             defaultButtonContent={"Join"}
             onAccept={() => {
-              const gid = gameId ?? defaultGameId;
+              const gid = gameId ?? userEnteredGameId ?? defaultGameId;
               if (!gid || !playerName) return;
-              setGameId(undefined);
-              joinGame?.(gid, playerName!);
-              closeJoinUI();
+              validateAndJoinGame(gid, playerName!);
             }}
             onCancel={() => {
               closeJoinUI();
               window.location.href = "/";
             }}
             allowAccept={
-              !!playerName && (gameId ?? defaultGameId)?.length === 4
+              !!playerName &&
+              (gameId ?? userEnteredGameId ?? defaultGameId)?.length === 4
             }
             show={true}
             centered={false}
@@ -314,8 +354,15 @@ export const GameSetup = (props: GameSetupProps) => {
           <SimpleModal
             title={"Cannot Join Game"}
             content={getGameCannotJoinUI()}
-            defaultButtonContent={"Back to Port"}
+            defaultButtonContent={"Try Another Game"}
+            alternateButtonContent={"Back to Port"}
             onAccept={() => {
+              setShowGameCannotJoinUI(false);
+              setGameId(undefined);
+              setIgnoreDefaultGameId(true);
+              setShowJoinGameUI(true);
+            }}
+            onCancel={() => {
               setShowGameCannotJoinUI(false);
               setGameId(undefined);
               // Navigate to root
@@ -326,12 +373,6 @@ export const GameSetup = (props: GameSetupProps) => {
             centered={false}
             fullScreen={false}
             backdrop={showTutorial ? false : true}
-            onCancel={() => {
-              setShowGameCannotJoinUI(false);
-              setGameId(undefined);
-              // Navigate to root
-              window.location.href = "/";
-            }}
           />
         )}
 
