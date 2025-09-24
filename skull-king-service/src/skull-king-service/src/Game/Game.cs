@@ -53,7 +53,7 @@ public record Game
     var indexOfPlayer = EditablePlayerRoundInfo.FindIndex(x => x.Player == player);
     if (indexOfPlayer == -1)
       throw new ArgumentException("Player not found");
-    if (indexOfPlayer == 0)
+    if (indexOfPlayer == 0 && EditablePlayerRoundInfo.Count > 1)
       throw new ArgumentException("Cannot remove first player");
 
     EditablePlayerRoundInfo.Remove(EditablePlayerRoundInfo.Single(x => x.Player == player));

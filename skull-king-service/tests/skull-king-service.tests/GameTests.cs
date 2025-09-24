@@ -86,6 +86,17 @@ public class GameTests
   }
 
   [Fact]
+  public void CanRemoveFirstPlayerWhenLast()
+  {
+    var game = Game.Create(new Player("Ryan"));
+    var controllingPlayer = game.PlayerRoundInfo.First().Player;
+
+    // Should not throw when the first player is the only one
+    game.RemovePlayer(controllingPlayer!);
+    Assert.Empty(game.PlayerRoundInfo);
+  }
+
+  [Fact]
   public void CanStartGame()
   {
     var game = Game.Create(new Player("Ryan"));

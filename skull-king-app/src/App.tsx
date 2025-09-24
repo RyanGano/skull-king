@@ -51,6 +51,8 @@ const App = () => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const currentHashRef = useRef<string | undefined>();
   const [showExitPopup, setShowExitPopup] = useState(false);
+  const [showCaptainCannotLeavePopup, setShowCaptainCannotLeavePopup] =
+    useState(false);
   const [gameChanging, setChangingGame] = useState(false);
   const [hasWarmedUp, setHasWarmedUp] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
@@ -651,6 +653,22 @@ const App = () => {
         fullScreen={false}
         backdrop={showTutorial ? false : true}
       />
+      <SimpleModal
+        title={"Cannot Abandon Ship"}
+        content={
+          <>
+            As the captain, ye cannot abandon the ship until every other member
+            of the crew has left!
+          </>
+        }
+        defaultButtonContent={"OK"}
+        onAccept={() => setShowCaptainCannotLeavePopup(false)}
+        onCancel={() => setShowCaptainCannotLeavePopup(false)}
+        show={showCaptainCannotLeavePopup}
+        centered={false}
+        fullScreen={false}
+        backdrop={showTutorial ? false : true}
+      />
       <Stack gap={2}>
         <GameInfo
           game={game}
@@ -711,7 +729,16 @@ const App = () => {
           className={"exitGameButton"}
           src="/images/skeleton.png"
           alt="Abandon yer mates."
-          onClick={() => setShowExitPopup(true)}
+          onClick={() => {
+            if (
+              game?.playerRoundInfo?.[0].player.id === me?.id &&
+              (game.playerRoundInfo?.length ?? 0) > 1
+            ) {
+              setShowCaptainCannotLeavePopup(true);
+            } else {
+              setShowExitPopup(true);
+            }
+          }}
         />
       )}
       {/* Share button positioned above footer (fixed) - show when not in setup and game is not in progress */}
