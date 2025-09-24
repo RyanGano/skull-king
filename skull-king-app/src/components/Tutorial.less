@@ -57,7 +57,8 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 4px @secondary-color-rgba;
   z-index: @z-index-tooltip;
   min-width: 300px;
-  max-width: 400px;
+  max-width: min(400px, 80vw);
+  max-height: 80vh;
   font-family: @main-font;
   color: @primary-color;
 }
@@ -109,6 +110,8 @@
   background: @background-white;
   font-family: @main-font;
   color: @primary-color;
+  max-height: calc(80vh - 120px); /* Account for header and footer */
+  overflow-y: auto;
 }
 
 .tutorial-tooltip-body p {
