@@ -72,14 +72,6 @@ const getTutorialSteps = (
       position: TipPosition.bottom,
       tips: ["Choose a name yer mates will recognize"],
     },
-    {
-      title: "Set Sail!",
-      description:
-        "Click 'Start' to create yer game and get a shareable code fer yer crew.",
-      highlightSelector: ".modal-footer .btn-primary",
-      position: TipPosition.bottom,
-      tips: ["Share the game code with yer mates to let 'em join the voyage"],
-    },
   ];
 
   const joinGameSteps: TutorialStep[] = [
