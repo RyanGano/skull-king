@@ -1,6 +1,12 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import Stack from "react-bootstrap/esm/Stack";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useLayoutEffect,
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { QuestionCircle } from "react-bootstrap-icons";
 import {
@@ -62,6 +68,7 @@ const App = () => {
     Set<TutorialContext>
   >(new Set());
   const [showTutorialPrompt, setShowTutorialPrompt] = useState(false);
+  const footerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (hasWarmedUp) {
@@ -607,6 +614,24 @@ const App = () => {
     navigate("/");
   }, [game, me, navigate]);
 
+  // Update footer height CSS variable for dynamic share button positioning
+  useLayoutEffect(() => {
+    const updateFooterHeight = () => {
+      if (footerRef.current) {
+        const height = footerRef.current.offsetHeight;
+        document.documentElement.style.setProperty(
+          "--footer-height",
+          `${height}px`
+        );
+      }
+    };
+
+    updateFooterHeight();
+
+    // Update on window resize
+    window.addEventListener("resize", updateFooterHeight);
+    return () => window.removeEventListener("resize", updateFooterHeight);
+  }, [game]);
   return (
     <div className={classNames("App", "pirateFont")}>
       <SimpleModal
@@ -765,9 +790,14 @@ const App = () => {
         fullScreen={false}
       />
 
-      <div className="gameFooter">
-        <span style={{ marginRight: 4 }}>A scoring application for the </span>
-        <div style={{ color: "#4f779f" }}>
+      <div
+        className={classNames("gameFooter", { "game-active": !!game })}
+        ref={footerRef}
+      >
+        <span style={{ marginRight: 4, whiteSpace: "nowrap" }}>
+          A scoring application for the
+        </span>
+        <div style={{ color: "#4f779f", whiteSpace: "nowrap" }}>
           <NavLink
             target="_blank"
             href="https://www.grandpabecksgames.com/pages/skull-king"
@@ -775,7 +805,9 @@ const App = () => {
             Skull King
           </NavLink>
         </div>
-        <span style={{ marginLeft: 4 }}>card game.</span>
+        <span style={{ marginLeft: 4, whiteSpace: "nowrap", marginRight: 12 }}>
+          card game.
+        </span>
         <div
           className="tutorial-toggle"
           onClick={() => {
@@ -797,7 +829,7 @@ const App = () => {
           <QuestionCircle
             size={20}
             color={tutorialMode ? "#ffd700" : "#666"}
-            style={{ cursor: "pointer", marginLeft: "12px" }}
+            style={{ cursor: "pointer" }}
           />
         </div>
       </div>

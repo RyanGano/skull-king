@@ -85,19 +85,25 @@ button:focus-visible {
   left: 10px;
   display: flex;
   font-size: 20px;
+  max-width: calc(100vw - 20px);
+}
+
+.gameFooter.game-active {
+  flex-wrap: wrap;
+  max-width: calc(100vw - 120px); /* Leave space for the skeleton button on the right */
 }
 
 .shareFooterButton {
   position: fixed;
   left: 10px;
-  bottom: 44px; /* sits just above the footer */
+  bottom: calc(8px + var(--footer-height, 0px)); /* Dynamic positioning above footer */
   z-index: 1001;
 }
 
 .shareFloating {
   position: fixed;
   left: 10px;
-  bottom: 44px; /* aligns the floating share button just above the footer */
+  bottom: calc(8px + var(--footer-height, 0px)); /* Dynamic positioning above footer */
   z-index: 1001;
 }
 
