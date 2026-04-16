@@ -19,6 +19,8 @@ interface BonusOption {
 // Consolidated dropdown options with maxCount for each
 const BONUS_OPTIONS: BonusOption[] = [
   { id: "color14", label: "Yellow/Green/Purple 14", points: 10, maxCount: 3 },
+  { id: "special8", label: "Special 8", points: 5, maxCount: 4 },
+  { id: "special7", label: "Special 7", points: -5, maxCount: 4 },
   { id: "black14", label: "Black 14", points: 20, maxCount: 1 },
   {
     id: "mermaid",
@@ -30,13 +32,25 @@ const BONUS_OPTIONS: BonusOption[] = [
     id: "pirate",
     label: "Pirate captured with the Skull King",
     points: 30,
-    maxCount: 6,
+    maxCount: 7,
   },
   {
     id: "skullking",
     label: "Skull King captured with a Mermaid",
     points: 40,
     maxCount: 1,
+  },
+  {
+    id: "firstmate",
+    label: "First Mate captured by Skull King or Mermaid",
+    points: 30,
+    maxCount: 1,
+  },
+  {
+    id: "davyjoneslocker",
+    label: "Creature destroyed by Davy Jones' Locker",
+    points: 20,
+    maxCount: 4,
   },
   { id: "goldcoins", label: "Gold Coins", points: 20, maxCount: 2 },
 ];
