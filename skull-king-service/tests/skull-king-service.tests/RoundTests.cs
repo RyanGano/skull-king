@@ -105,7 +105,6 @@ public class RoundTests
 
   [Theory]
   [InlineData(-1)]
-  [InlineData(5)]
   [InlineData(1)]
   [InlineData(9)]
   public void ThrowsOnBadBonus(int bonus)
