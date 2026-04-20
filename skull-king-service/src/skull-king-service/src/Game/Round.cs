@@ -47,11 +47,11 @@ public record Round
     if (bonus != 0)
     {
       if (Bid is null)
-        throw new ArgumentException("Cannot set tricks taken without a bid");
+        throw new ArgumentException("Cannot set bonus without a bid");
       if (Bid != TricksTaken)
         throw new ArgumentException("Cannot set bonus without matching bid and tricks taken");
-      if (bonus < 0 || bonus % 10 != 0)
-        throw new ArgumentException("Bonus must be between a positive multiple of 10");
+      if (bonus % 5 != 0)
+        throw new ArgumentException("Bonus must be a multiple of 5");
     }
 
     Bonus = bonus;
