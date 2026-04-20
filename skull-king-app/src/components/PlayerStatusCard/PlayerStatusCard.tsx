@@ -131,7 +131,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
           >
             {i}
           </div>
-        </div>
+        </div>,
       );
     }
     return <div className="wrappingContainer">{children}</div>;
@@ -151,7 +151,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
 
     // Only show options in dropdown if not at maxCount
     const availableOptions = BONUS_OPTIONS.filter(
-      (option) => (bonusCounts[option.id] || 0) < option.maxCount
+      (option) => (bonusCounts[option.id] || 0) < option.maxCount,
     );
 
     const handleBonusSelect = (optionId: string) => {
@@ -163,7 +163,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
     const handleBonusRemove = (indexToRemove: number) => {
       if (!allowBonus) return;
       setSelectedBonuses((prev) =>
-        prev.filter((_, idx) => idx !== indexToRemove)
+        prev.filter((_, idx) => idx !== indexToRemove),
       );
     };
 
@@ -271,7 +271,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
           }}
         >
           <div className="numberDisplayContainer">{i}</div>
-        </div>
+        </div>,
       );
     }
 
@@ -337,7 +337,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
             ["loser03"]: myPlace === 6,
             ["loser04"]: myPlace === 7,
             ["loser05"]: myPlace === 8,
-          }
+          },
         )}
       >
         <div
@@ -352,8 +352,8 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
                   onTutorialContextChanged?.(TutorialContext.bidding);
                 })()
               : onScoreChange
-              ? setShowScoreUI(true)
-              : undefined
+                ? setShowScoreUI(true)
+                : undefined
           }
         >
           <Stack>
@@ -365,7 +365,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
               <p>
                 {currentRound.maxBid !== 1 ? (
                   <span>{`Last Round: ${calculateRoundScore(
-                    playerRounds.rounds.slice(-2)[0]
+                    playerRounds.rounds.slice(-2)[0],
                   )}`}</span>
                 ) : (
                   <br />
@@ -386,7 +386,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
             {/* Bid has been entered (only show if it's my bid). */}
             {turnPhase === GameStatus.biddingOpen &&
               currentRound.bid !== null && (
-                <span>{`Bid: ${isMe ? currentRound.bid ?? 0 : "READY"}`}</span>
+                <span>{`Bid: ${isMe ? (currentRound.bid ?? 0) : "READY"}`}</span>
               )}
             {/* All bids are public and round is starting. */}
             {turnPhase === GameStatus.biddingClosed && (

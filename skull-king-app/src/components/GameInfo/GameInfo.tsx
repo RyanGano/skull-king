@@ -16,7 +16,7 @@ export interface GameInfoProps {
   reorderPlayers?: (playerOrder: string[]) => Promise<void>;
   startGame?: (
     randomBids: boolean,
-    gameDifficulty: GameDifficulty
+    gameDifficulty: GameDifficulty,
   ) => Promise<void>;
   onTutorialContextChanged?: (context: TutorialContext) => void;
 }
@@ -34,7 +34,7 @@ export const GameInfo = (props: GameInfoProps) => {
   const [myUpdatedName, setMyUpdatedName] = useState<string>();
   const [showRandomBidPopup, setShowRandomBidPopup] = useState<boolean>(false);
   const [draggedPlayerIndex, setDraggedPlayerIndex] = useState<number | null>(
-    null
+    null,
   );
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const lastDragUpdateRef = useRef<number>(0);
@@ -71,15 +71,15 @@ export const GameInfo = (props: GameInfoProps) => {
         buttonDifficulty == GameDifficulty.Easy
           ? "Easy"
           : buttonDifficulty == GameDifficulty.Medium
-          ? "Medium"
-          : "Hard";
+            ? "Medium"
+            : "Hard";
 
       const difficultyClass =
         buttonDifficulty == GameDifficulty.Easy
           ? "easy-button"
           : buttonDifficulty == GameDifficulty.Medium
-          ? "medium-button"
-          : "hard-button";
+            ? "medium-button"
+            : "hard-button";
 
       return (
         <div
@@ -96,7 +96,7 @@ export const GameInfo = (props: GameInfoProps) => {
         </div>
       );
     },
-    [startGame, onTutorialContextChanged]
+    [startGame, onTutorialContextChanged],
   );
 
   // Show tutorial when startGame buttons are available (user can start the game)

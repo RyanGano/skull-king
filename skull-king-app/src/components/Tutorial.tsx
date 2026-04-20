@@ -32,7 +32,7 @@ const getTutorialSteps = (
   context: TutorialContext,
   playerCount?: number,
   isCaptain?: boolean,
-  isRandomBid?: boolean
+  isRandomBid?: boolean,
 ): TutorialStep[] => {
   // Define all tutorial step arrays as named constants
   const homeSteps: TutorialStep[] = [
@@ -424,14 +424,14 @@ export const Tutorial: React.FC<TutorialProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const [highlightedElement, setHighlightedElement] = useState<Element | null>(
-    null
+    null,
   );
   const highlightedElementRef = React.useRef<Element | null>(null);
   const tooltipRef = React.useRef<HTMLDivElement>(null);
 
   const steps = useMemo(
     () => getTutorialSteps(context, playerCount, isCaptain, isRandomBid),
-    [context, playerCount, isCaptain, isRandomBid]
+    [context, playerCount, isCaptain, isRandomBid],
   );
 
   // Reset to first step when context changes

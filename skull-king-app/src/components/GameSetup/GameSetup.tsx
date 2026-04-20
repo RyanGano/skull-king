@@ -19,7 +19,7 @@ interface GameSetupProps {
     context:
       | TutorialContext.home
       | TutorialContext.createGame
-      | TutorialContext.joinGame
+      | TutorialContext.joinGame,
   ) => void;
   showTutorial?: boolean;
 }
@@ -61,7 +61,7 @@ export const GameSetup = (props: GameSetupProps) => {
     (open: boolean) => {
       onSetupModalChanged?.(open);
     },
-    [onSetupModalChanged]
+    [onSetupModalChanged],
   );
 
   const openCreateUI = useCallback(() => {
@@ -113,7 +113,7 @@ export const GameSetup = (props: GameSetupProps) => {
           } else {
             // Game exists but cannot be joined
             setJoinError(
-              "This game is already in progress and cannot be joined."
+              "This game is already in progress and cannot be joined.",
             );
           }
         } else {
@@ -125,7 +125,7 @@ export const GameSetup = (props: GameSetupProps) => {
         setJoinError("Unable to check game status. Please try again.");
       }
     },
-    [joinGame, closeJoinUI]
+    [joinGame, closeJoinUI],
   );
 
   // Prefill game id when defaultGameId is provided and no playerId (meaning user needs to join)
@@ -196,7 +196,7 @@ export const GameSetup = (props: GameSetupProps) => {
   const getJoinGameUI = () => {
     const displayGameId = ignoreDefaultGameId
       ? gameId
-      : defaultGameId ?? gameId;
+      : (defaultGameId ?? gameId);
     return (
       <Stack gap={2}>
         {joinError && <div className="joinError">{joinError}</div>}

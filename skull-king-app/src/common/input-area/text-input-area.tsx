@@ -67,7 +67,7 @@ export const TextInputArea = (props: TextInputAreaProps) => {
       const possibleOption =
         value !== "" && !!value
           ? possibleOptions.find((x) =>
-              x.toLowerCase().startsWith(value.toLowerCase())
+              x.toLowerCase().startsWith(value.toLowerCase()),
             )
           : null;
 

@@ -62,7 +62,7 @@ const App = () => {
   // Controls whether tutorial content is currently visible on screen
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialContext, setTutorialContext] = useState<TutorialContext>(
-    TutorialContext.home
+    TutorialContext.home,
   );
   // Global setting that controls whether tutorial mode is enabled (affects auto-showing tutorials)
   const [tutorialMode, setTutorialMode] = useState(false);
@@ -175,7 +175,7 @@ const App = () => {
           tutorialContextRef.current !== TutorialContext.inGame
         ) {
           setSeenTutorialContexts((prev) =>
-            new Set(prev).add(tutorialContextRef.current)
+            new Set(prev).add(tutorialContextRef.current),
           );
           setShowTutorial(false);
         }
@@ -269,7 +269,7 @@ const App = () => {
         }
       }
     },
-    [me, navigate, game?.status]
+    [me, navigate, game?.status],
   );
 
   const getCurrentHash = useCallback(
@@ -309,7 +309,7 @@ const App = () => {
         return currentGame.data.hash;
       }
     },
-    [me, navigate]
+    [me, navigate],
   );
 
   const startUpdateTimer = useCallback(
@@ -324,7 +324,7 @@ const App = () => {
         updateGame(id, currentHashRef.current ?? "");
       }, 1000);
     },
-    [updateGame]
+    [updateGame],
   );
 
   // Handle URL-based game and player loading
@@ -337,7 +337,7 @@ const App = () => {
           if (gameResult.status === 200) {
             const gameData = gameResult.data;
             const player = (gameData as Game).playerRoundInfo?.find(
-              (pri) => pri.player?.id === urlPlayerId
+              (pri) => pri.player?.id === urlPlayerId,
             )?.player;
 
             if (player) {
@@ -372,7 +372,7 @@ const App = () => {
 
       const result = await callPostRoute(
         CreateNewGameUri(),
-        JSON.parse(JSON.stringify(personDto))
+        JSON.parse(JSON.stringify(personDto)),
       );
 
       if (result.status !== 201) {
@@ -391,7 +391,7 @@ const App = () => {
         setTutorialContext(TutorialContext.inGame);
       }
     },
-    [navigate, startUpdateTimer]
+    [navigate, startUpdateTimer],
   );
 
   const joinGame = useCallback(
@@ -403,7 +403,7 @@ const App = () => {
 
       const result = await callPutRoute(
         AddPlayerUri(gameId),
-        JSON.parse(JSON.stringify({ name: playerName }))
+        JSON.parse(JSON.stringify({ name: playerName })),
       );
 
       if (result.status !== 200) {
@@ -427,7 +427,7 @@ const App = () => {
         }
       }
     },
-    [navigate, startUpdateTimer]
+    [navigate, startUpdateTimer],
   );
 
   const editPlayerName = useCallback(
@@ -439,7 +439,7 @@ const App = () => {
 
       const result = await callPutRoute(
         EditPlayerUri(game.id),
-        JSON.parse(JSON.stringify({ ...me, name: newName }))
+        JSON.parse(JSON.stringify({ ...me, name: newName })),
       );
 
       if (result.status !== 200) {
@@ -448,7 +448,7 @@ const App = () => {
         updateGame(game.id, currentHashRef.current ?? "");
       }
     },
-    [game?.id, me, updateGame]
+    [game?.id, me, updateGame],
   );
 
   const reorderPlayers = useCallback(
@@ -467,8 +467,8 @@ const App = () => {
             playerOrder: playerOrder,
             playerId: me.id,
             knownHash: currentHashRef.current ?? "",
-          })
-        )
+          }),
+        ),
       );
 
       if (result.status !== 200) {
@@ -477,14 +477,14 @@ const App = () => {
         updateGame(game.id, currentHashRef.current ?? "");
       }
     },
-    [game?.id, me?.id, updateGame]
+    [game?.id, me?.id, updateGame],
   );
 
   const handleTutorialContextChanged = useCallback(
     (context: TutorialContext) => {
       setTutorialContext(context);
     },
-    []
+    [],
   );
 
   const startGame = useCallback(
@@ -499,7 +499,7 @@ const App = () => {
       }
 
       const result = await callGetRoute(
-        StartGameUri(game.id, me.id, game.hash, randomBids, gameDifficulty)
+        StartGameUri(game.id, me.id, game.hash, randomBids, gameDifficulty),
       );
 
       if (result.status !== 200) {
@@ -508,7 +508,7 @@ const App = () => {
         updateGame(game.id, currentHashRef.current ?? "");
       }
     },
-    [game?.hash, game?.id, game?.playerRoundInfo, me?.id, updateGame]
+    [game?.hash, game?.id, game?.playerRoundInfo, me?.id, updateGame],
   );
 
   const restartGame = useCallback(async () => {
@@ -518,7 +518,7 @@ const App = () => {
     }
 
     const result = await callGetRoute(
-      GameResetUri(game.id, me.id, currentHashRef.current ?? "")
+      GameResetUri(game.id, me.id, currentHashRef.current ?? ""),
     );
 
     if (result.status !== 200) {
@@ -544,7 +544,7 @@ const App = () => {
       setChangingGame(true);
       // Attempt to update the game status
       const result = await callGetRoute(
-        GameMovePreviousPhaseUri(game.id, me.id, hash ?? game.hash)
+        GameMovePreviousPhaseUri(game.id, me.id, hash ?? game.hash),
       );
 
       if (result.status !== 200) {
@@ -559,7 +559,7 @@ const App = () => {
         setChangingGame(false);
       }
     },
-    [game, getCurrentHash, me, updateGame]
+    [game, getCurrentHash, me, updateGame],
   );
 
   const moveToNextGameStatus = useCallback(
@@ -572,7 +572,7 @@ const App = () => {
       setChangingGame(true);
       // Attempt to update the game status
       const result = await callGetRoute(
-        GameMoveNextPhaseUri(game.id, me.id, hash ?? game.hash)
+        GameMoveNextPhaseUri(game.id, me.id, hash ?? game.hash),
       );
 
       if (result.status !== 200) {
@@ -589,14 +589,14 @@ const App = () => {
         setChangingGame(false);
       }
     },
-    [game, getCurrentHash, me, updateGame]
+    [game, getCurrentHash, me, updateGame],
   );
 
   const exitGame = useCallback(async () => {
     if (game && me) {
       // Call the backend to remove the player
       const result = await callDeleteRoute(
-        RemovePlayerUri(game.id, me.id, currentHashRef.current ?? "")
+        RemovePlayerUri(game.id, me.id, currentHashRef.current ?? ""),
       );
       if (result.status === 200 || result.status === 404) {
         // Successfully removed or game/player not found
@@ -623,7 +623,7 @@ const App = () => {
         const height = footerRef.current.offsetHeight;
         document.documentElement.style.setProperty(
           "--footer-height",
-          `${height}px`
+          `${height}px`,
         );
       }
     };

@@ -35,7 +35,7 @@ export const callPostRoute = async (uri: string, postData: JSON) => {
       console.log(
         "Post: Bad request",
         { request: postData, response: theError.response?.data },
-        uri
+        uri,
       );
     }
 
@@ -62,7 +62,7 @@ export const callPutRoute = async (uri: string, putData: JSON) => {
       console.log(
         "Put: Bad request",
         { request: putData, response: theError.response?.data },
-        uri
+        uri,
       );
     }
 

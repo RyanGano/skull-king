@@ -41,7 +41,7 @@ export const SimpleModal = (props: SimpleModalProps) => {
         show={show}
         onHide={onCancel}
         centered={centered ?? true}
-        fullscreen={fullScreen ?? true ? "sm-down" : ""}
+        fullscreen={(fullScreen ?? true) ? "sm-down" : ""}
         backdrop={backdrop}
       >
         <Modal.Header closeButton>

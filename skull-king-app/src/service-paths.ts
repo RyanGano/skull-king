@@ -20,11 +20,11 @@ const CurrentBaseUri = import.meta.env.VITE_REACT_APP_BASE_SERVICE_URI;
 
 function formatUriString(
   input: string,
-  variables: { key: string; value: string }[] | undefined
+  variables: { key: string; value: string }[] | undefined,
 ) {
   let currentString = input.replace("BASE_URI", CurrentBaseUri);
   variables?.forEach(
-    (x) => (currentString = currentString.replace(x.key, x.value))
+    (x) => (currentString = currentString.replace(x.key, x.value)),
   );
   return currentString;
 }
@@ -53,7 +53,7 @@ export function StartGameUri(
   playerId: string,
   currentHash: string,
   randomBids: boolean,
-  gameDifficulty: GameDifficulty
+  gameDifficulty: GameDifficulty,
 ) {
   return formatUriString(StartGameInternal, [
     { key: "GAME_ID", value: gameId },
@@ -79,7 +79,7 @@ export function EditPlayerUri(gameId: string) {
 export function GameMoveNextPhaseUri(
   gameId: string,
   playerId: string,
-  currentHash: string
+  currentHash: string,
 ) {
   return formatUriString(GameMoveNextPhaseInternal, [
     { key: "GAME_ID", value: gameId },
@@ -91,7 +91,7 @@ export function GameMoveNextPhaseUri(
 export function GameMovePreviousPhaseUri(
   gameId: string,
   playerId: string,
-  currentHash: string
+  currentHash: string,
 ) {
   return formatUriString(GameMovePreviousPhaseInternal, [
     { key: "GAME_ID", value: gameId },
@@ -104,7 +104,7 @@ export function GameSetBidUri(
   gameId: string,
   playerId: string,
   bid: number,
-  currentHash: string
+  currentHash: string,
 ) {
   return formatUriString(GameSetBidInternal, [
     { key: "GAME_ID", value: gameId },
@@ -119,7 +119,7 @@ export function GameSetScoreUri(
   playerId: string,
   tricksTaken: number,
   bonus: number,
-  currentHash: string
+  currentHash: string,
 ) {
   return formatUriString(GameSetScoreInternal, [
     { key: "GAME_ID", value: gameId },
@@ -133,7 +133,7 @@ export function GameSetScoreUri(
 export function GameResetUri(
   gameId: string,
   playerId: string,
-  currentHash: string
+  currentHash: string,
 ) {
   return formatUriString(GameResetInternal, [
     { key: "GAME_ID", value: gameId },
@@ -149,7 +149,7 @@ export function GameGetSingleGameIdUri() {
 export function GameRemovePlayerUri(
   gameId: string,
   playerId: string,
-  currentHash: string
+  currentHash: string,
 ) {
   return formatUriString(GameRemovePlayerInternal, [
     { key: "GAME_ID", value: gameId },
@@ -167,7 +167,7 @@ export function GameReorderPlayersUri(gameId: string) {
 export function RemovePlayerUri(
   gameId: string,
   playerId: string,
-  currentHash: string
+  currentHash: string,
 ) {
   return GameRemovePlayerUri(gameId, playerId, currentHash);
 }

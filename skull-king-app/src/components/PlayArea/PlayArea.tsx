@@ -56,7 +56,7 @@ export const PlayArea = (props: PlayAreaProps) => {
       setChangingGame(true);
       // Attempt to update the bid
       const result = await callGetRoute(
-        GameSetBidUri(game.id, me.id, bid, hash ?? game.hash)
+        GameSetBidUri(game.id, me.id, bid, hash ?? game.hash),
       );
 
       if (result.status !== 200) {
@@ -74,7 +74,7 @@ export const PlayArea = (props: PlayAreaProps) => {
         setChangingGame(false);
       }
     },
-    [game, getCurrentHash, me]
+    [game, getCurrentHash, me],
   );
 
   const changeScore = useCallback(
@@ -87,7 +87,7 @@ export const PlayArea = (props: PlayAreaProps) => {
       setChangingGame(true);
       // Attempt to update the game score
       const result = await callGetRoute(
-        GameSetScoreUri(game.id, me.id, tricksTaken, bonus, hash ?? game.hash)
+        GameSetScoreUri(game.id, me.id, tricksTaken, bonus, hash ?? game.hash),
       );
 
       if (result.status !== 200) {
@@ -105,19 +105,19 @@ export const PlayArea = (props: PlayAreaProps) => {
         setChangingGame(false);
       }
     },
-    [game, getCurrentHash, me]
+    [game, getCurrentHash, me],
   );
 
   const gameState =
     game?.status === GameStatus.gameOver
       ? "Game Over"
       : game?.status === GameStatus.biddingClosed
-      ? `Bidding Closed (round ${
-          game.playerRoundInfo?.[0]?.rounds.length ?? 0
-        })`
-      : game?.status === GameStatus.biddingOpen
-      ? `Bidding Open (round ${game.playerRoundInfo?.[0]?.rounds.length ?? 0})`
-      : "";
+        ? `Bidding Closed (round ${
+            game.playerRoundInfo?.[0]?.rounds.length ?? 0
+          })`
+        : game?.status === GameStatus.biddingOpen
+          ? `Bidding Open (round ${game.playerRoundInfo?.[0]?.rounds.length ?? 0})`
+          : "";
 
   if (!game) return null;
 
