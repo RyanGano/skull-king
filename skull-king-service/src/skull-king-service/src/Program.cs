@@ -5,12 +5,12 @@ var AllowSkullKingApp = "_allowSkullKingApp";
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<SkullKingDbContext>(options =>
-    options.UseInMemoryDatabase("SkullKingInMemoryDb"));
+  options.UseInMemoryDatabase("SkullKingInMemoryDb"));
 
 SetupCors(AllowSkullKingApp, builder);
 
 var app = builder.Build();
-app.UseCors();
+app.UseCors(AllowSkullKingApp);
 
 GameRoutes.Register(app, AllowSkullKingApp);
 
@@ -26,7 +26,13 @@ static void SetupCors(string AllowSkullKingApp, WebApplicationBuilder builder)
     options.AddPolicy(name: AllowSkullKingApp,
           policy =>
           {
-            policy.WithOrigins($"{Environment.GetEnvironmentVariable("SK_CLIENT_ADDRESS")}:{Environment.GetEnvironmentVariable("PORT")}").AllowAnyMethod().AllowAnyHeader();
+            var clientAddress = Environment.GetEnvironmentVariable("SK_CLIENT_ADDRESS") ?? "http://localhost";
+            var port = Environment.GetEnvironmentVariable("PORT") ?? "53647";
+            var origin = $"{clientAddress}:{port}";
+            var allowed = new[] { origin, $"http://localhost:{port}", $"http://127.0.0.1:{port}" };
+            policy.WithOrigins(allowed)
+              .AllowAnyMethod()
+              .AllowAnyHeader();
           });
   });
 }
