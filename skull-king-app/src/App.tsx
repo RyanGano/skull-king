@@ -129,6 +129,7 @@ const App = () => {
   }, [tutorialContext]);
 
   const captainId = game?.playerRoundInfo?.[0]?.player?.id;
+  const iAmCaptain = !!me?.id && captainId === me.id;
 
   useEffect(() => {
     if (
@@ -431,7 +432,7 @@ const App = () => {
   );
 
   const editPlayerName = useCallback(
-    async (newName: string) => {
+    async (player: Player, newName: string) => {
       if (!game?.id || !newName) {
         console.log("No game id");
         return;
@@ -439,7 +440,7 @@ const App = () => {
 
       const result = await callPutRoute(
         EditPlayerUri(game.id),
-        JSON.parse(JSON.stringify({ ...me, name: newName })),
+        JSON.parse(JSON.stringify({ ...player, name: newName })),
       );
 
       if (result.status !== 200) {
@@ -448,7 +449,46 @@ const App = () => {
         updateGame(game.id, currentHashRef.current ?? "");
       }
     },
-    [game?.id, me, updateGame],
+    [game?.id, updateGame],
+  );
+
+  const addPlayerAsOwner = useCallback(
+    async (playerName: string) => {
+      if (!game?.id || !playerName) {
+        return;
+      }
+
+      const result = await callPutRoute(
+        AddPlayerUri(game.id),
+        JSON.parse(JSON.stringify({ name: playerName })),
+      );
+
+      if (result.status !== 200) {
+        console.log("Error adding player", result.status, result.statusText);
+      } else {
+        updateGame(game.id, currentHashRef.current ?? "");
+      }
+    },
+    [game?.id, updateGame],
+  );
+
+  const removeOtherPlayer = useCallback(
+    async (playerId: string) => {
+      if (!game?.id || !me?.id) {
+        return;
+      }
+
+      const result = await callDeleteRoute(
+        RemovePlayerUri(game.id, playerId, me.id, currentHashRef.current ?? ""),
+      );
+
+      if (result.status !== 200 && result.status !== 404) {
+        console.log("Error removing player", result.status, result.statusText);
+      } else {
+        updateGame(game.id, currentHashRef.current ?? "");
+      }
+    },
+    [game?.id, me?.id, updateGame],
   );
 
   const reorderPlayers = useCallback(
@@ -596,7 +636,7 @@ const App = () => {
     if (game && me) {
       // Call the backend to remove the player
       const result = await callDeleteRoute(
-        RemovePlayerUri(game.id, me.id, currentHashRef.current ?? ""),
+        RemovePlayerUri(game.id, me.id, me.id, currentHashRef.current ?? ""),
       );
       if (result.status === 200 || result.status === 404) {
         // Successfully removed or game/player not found
@@ -673,12 +713,22 @@ const App = () => {
         <GameInfo
           game={game}
           me={me!}
-          editMyName={editPlayerName}
+          editPlayerName={editPlayerName}
           reorderPlayers={reorderPlayers}
+          addPlayer={
+            game?.status === GameStatus.acceptingPlayers && iAmCaptain
+              ? addPlayerAsOwner
+              : undefined
+          }
+          removePlayer={
+            game?.status === GameStatus.acceptingPlayers && iAmCaptain
+              ? removeOtherPlayer
+              : undefined
+          }
           startGame={
             game?.status === GameStatus.acceptingPlayers &&
             (game.playerRoundInfo?.length ?? 0) > 1 &&
-            game?.playerRoundInfo?.[0].player.id === me?.id
+            iAmCaptain
               ? startGame
               : undefined
           }
@@ -730,10 +780,7 @@ const App = () => {
           src="/images/skeleton.png"
           alt="Abandon yer mates."
           onClick={() => {
-            if (
-              game?.playerRoundInfo?.[0].player.id === me?.id &&
-              (game.playerRoundInfo?.length ?? 0) > 1
-            ) {
+            if (iAmCaptain && (game.playerRoundInfo?.length ?? 0) > 1) {
               setShowCaptainCannotLeavePopup(true);
             } else {
               setShowExitPopup(true);
@@ -878,7 +925,7 @@ const App = () => {
         }}
         context={TutorialContext.initialPrompt}
         playerCount={game?.playerRoundInfo?.length}
-        isCaptain={game?.playerRoundInfo?.[0].player.id === me?.id}
+        iAmCaptain={iAmCaptain}
         isRandomBid={game?.isRandomBid}
       />
       <Tutorial
@@ -908,7 +955,7 @@ const App = () => {
         }}
         context={tutorialContext}
         playerCount={game?.playerRoundInfo?.length}
-        isCaptain={game?.playerRoundInfo?.[0].player.id === me?.id}
+        iAmCaptain={iAmCaptain}
         isRandomBid={game?.isRandomBid}
       />
     </div>

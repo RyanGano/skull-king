@@ -24,14 +24,14 @@ interface TutorialProps {
   onComplete?: () => void;
   context: TutorialContext;
   playerCount?: number;
-  isCaptain?: boolean;
+  iAmCaptain?: boolean;
   isRandomBid?: boolean;
 }
 
 const getTutorialSteps = (
   context: TutorialContext,
   playerCount?: number,
-  isCaptain?: boolean,
+  iAmCaptain?: boolean,
   isRandomBid?: boolean,
 ): TutorialStep[] => {
   // Define all tutorial step arrays as named constants
@@ -379,7 +379,7 @@ const getTutorialSteps = (
 
     case TutorialContext.inGame:
       // Show start game options tutorial only to the captain when there are 2+ players
-      if (playerCount && playerCount > 1 && isCaptain) {
+      if (playerCount && playerCount > 1 && iAmCaptain) {
         return startGameOptionsSteps;
       } else {
         // Show waiting room tutorial to everyone else
@@ -389,7 +389,7 @@ const getTutorialSteps = (
     case TutorialContext.bidding:
       return [
         ...readingTheGameStatusSteps,
-        ...(isCaptain ? captainNavigationSteps : []),
+        ...(iAmCaptain ? captainNavigationSteps : []),
         ...biddingSteps,
       ];
 
@@ -398,7 +398,7 @@ const getTutorialSteps = (
         ...readingTheGameStatusSteps,
         ...(isRandomBid ? autoBidReminderStep : []),
         ...playingSteps,
-        ...(isCaptain && isRandomBid ? captainAutoBidSteps : []),
+        ...(iAmCaptain && isRandomBid ? captainAutoBidSteps : []),
       ];
 
     case TutorialContext.startGameOptions:
@@ -418,7 +418,7 @@ export const Tutorial: React.FC<TutorialProps> = ({
   onComplete,
   context,
   playerCount,
-  isCaptain,
+  iAmCaptain,
   isRandomBid,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -430,8 +430,8 @@ export const Tutorial: React.FC<TutorialProps> = ({
   const tooltipRef = React.useRef<HTMLDivElement>(null);
 
   const steps = useMemo(
-    () => getTutorialSteps(context, playerCount, isCaptain, isRandomBid),
-    [context, playerCount, isCaptain, isRandomBid],
+    () => getTutorialSteps(context, playerCount, iAmCaptain, isRandomBid),
+    [context, playerCount, iAmCaptain, isRandomBid],
   );
 
   // Reset to first step when context changes

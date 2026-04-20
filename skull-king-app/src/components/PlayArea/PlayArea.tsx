@@ -47,16 +47,16 @@ export const PlayArea = (props: PlayAreaProps) => {
   }, [changingGame, gameChanging]);
 
   const changeBid = useCallback(
-    async (bid: number, hash?: string) => {
-      if (!game || !me) {
-        console.log("No game or player");
+    async (playerId: string, bid: number, hash?: string) => {
+      if (!game) {
+        console.log("No game");
         return;
       }
 
       setChangingGame(true);
       // Attempt to update the bid
       const result = await callGetRoute(
-        GameSetBidUri(game.id, me.id, bid, hash ?? game.hash),
+        GameSetBidUri(game.id, playerId, bid, hash ?? game.hash),
       );
 
       if (result.status !== 200) {
@@ -65,7 +65,7 @@ export const PlayArea = (props: PlayAreaProps) => {
         if (result.status === 409) {
           setTimeout(async () => {
             const hash = await getCurrentHash();
-            changeBid(bid, hash);
+            changeBid(playerId, bid, hash);
           }, 1000);
         }
       }
@@ -74,20 +74,31 @@ export const PlayArea = (props: PlayAreaProps) => {
         setChangingGame(false);
       }
     },
-    [game, getCurrentHash, me],
+    [game, getCurrentHash],
   );
 
   const changeScore = useCallback(
-    async (tricksTaken: number, bonus: number, hash?: string) => {
-      if (!game || !me) {
-        console.log("No game or player");
+    async (
+      playerId: string,
+      tricksTaken: number,
+      bonus: number,
+      hash?: string,
+    ) => {
+      if (!game) {
+        console.log("No game");
         return;
       }
 
       setChangingGame(true);
       // Attempt to update the game score
       const result = await callGetRoute(
-        GameSetScoreUri(game.id, me.id, tricksTaken, bonus, hash ?? game.hash),
+        GameSetScoreUri(
+          game.id,
+          playerId,
+          tricksTaken,
+          bonus,
+          hash ?? game.hash,
+        ),
       );
 
       if (result.status !== 200) {
@@ -96,7 +107,7 @@ export const PlayArea = (props: PlayAreaProps) => {
         if (result.status === 409) {
           setTimeout(async () => {
             const hash = await getCurrentHash();
-            changeScore(tricksTaken, bonus, hash);
+            changeScore(playerId, tricksTaken, bonus, hash);
           }, 1000);
         }
       }
@@ -105,7 +116,7 @@ export const PlayArea = (props: PlayAreaProps) => {
         setChangingGame(false);
       }
     },
-    [game, getCurrentHash, me],
+    [game, getCurrentHash],
   );
 
   const gameState =
@@ -167,6 +178,10 @@ export const PlayArea = (props: PlayAreaProps) => {
     [...game.playerRoundInfo].sort((a) => (a.player.id === me.id ? -1 : 0)) ??
     [];
 
+  const iAmCaptain = game.playerRoundInfo[0].player.id === me.id;
+  const isGhostPlayer = (player: { name: string }) =>
+    player.name === "Ghost Player";
+
   return (
     <div>
       {showOverlay && (
@@ -183,14 +198,18 @@ export const PlayArea = (props: PlayAreaProps) => {
               playerRounds={x}
               turnPhase={game.status}
               onBidChange={
-                x.player.id === me.id && game.status === GameStatus.biddingOpen
-                  ? (bid) => changeBid(bid)
+                (x.player.id === me.id || iAmCaptain) &&
+                !isGhostPlayer(x.player) &&
+                game.status === GameStatus.biddingOpen
+                  ? (bid) => changeBid(x.player.id, bid)
                   : undefined
               }
               onScoreChange={
-                x.player.id === me.id &&
+                (x.player.id === me.id || iAmCaptain) &&
+                !isGhostPlayer(x.player) &&
                 game.status === GameStatus.biddingClosed
-                  ? (tricksTaken, bonus) => changeScore(tricksTaken, bonus)
+                  ? (tricksTaken, bonus) =>
+                      changeScore(x.player.id, tricksTaken, bonus)
                   : undefined
               }
               dealer={x.player.id === dealerId}
@@ -213,7 +232,7 @@ export const PlayArea = (props: PlayAreaProps) => {
               game.playerRoundInfo[0].rounds.length > 1 ||
               game.status === GameStatus.biddingClosed
             ),
-            ["hidden"]: !(game.playerRoundInfo[0].player.id === me.id),
+            ["hidden"]: !iAmCaptain,
           })}
           onClick={() =>
             game.playerRoundInfo[0].rounds.length > 1 ||
@@ -227,7 +246,7 @@ export const PlayArea = (props: PlayAreaProps) => {
           className={classNames("gameStatusNavButton", {
             ["next"]: true,
             ["disabled"]: !(game.status !== GameStatus.gameOver),
-            ["hidden"]: !(game.playerRoundInfo[0].player.id === me.id),
+            ["hidden"]: !iAmCaptain,
           })}
           onClick={() =>
             game.status !== GameStatus.gameOver ? moveToNextGameStatus() : null
@@ -236,7 +255,7 @@ export const PlayArea = (props: PlayAreaProps) => {
       </div>
       {showRestartButtons &&
         game.status === GameStatus.gameOver &&
-        game.playerRoundInfo[0].player.id === me.id && (
+        iAmCaptain && (
           <div className="restartButtonsContainer">
             <button
               className="restartButton restartGameButton"

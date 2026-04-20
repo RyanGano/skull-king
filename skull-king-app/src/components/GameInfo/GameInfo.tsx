@@ -1,6 +1,6 @@
 import { Button, Stack } from "react-bootstrap";
 import classNames from "classnames";
-import { GripVertical } from "react-bootstrap-icons";
+import { GripVertical, XCircle } from "react-bootstrap-icons";
 import { Game, GameDifficulty, GameStatus, Player } from "../../types/game";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SimpleModal } from "../../common/simple-modal";
@@ -12,8 +12,10 @@ import { TutorialContext } from "../../TutorialContext";
 export interface GameInfoProps {
   game: Game | null;
   me: Player;
-  editMyName: (name: string) => Promise<void>;
+  editPlayerName: (player: Player, name: string) => Promise<void>;
   reorderPlayers?: (playerOrder: string[]) => Promise<void>;
+  addPlayer?: (name: string) => Promise<void>;
+  removePlayer?: (playerId: string) => Promise<void>;
   startGame?: (
     randomBids: boolean,
     gameDifficulty: GameDifficulty,
@@ -25,14 +27,20 @@ export const GameInfo = (props: GameInfoProps) => {
   const {
     game,
     me,
-    editMyName,
+    editPlayerName,
     reorderPlayers,
+    addPlayer,
+    removePlayer,
     startGame,
     onTutorialContextChanged,
   } = props;
-  const [showEditPlayerUI, setShowEditPlayerUI] = useState<boolean>(false);
-  const [myUpdatedName, setMyUpdatedName] = useState<string>();
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  const [editedPlayerName, setEditedPlayerName] = useState<string>("");
+  const [playerToRemove, setPlayerToRemove] = useState<Player | null>(null);
+  const [showAddPlayerUI, setShowAddPlayerUI] = useState<boolean>(false);
+  const [newPlayerName, setNewPlayerName] = useState<string>("");
   const [showRandomBidPopup, setShowRandomBidPopup] = useState<boolean>(false);
+  const MAX_PLAYERS = 8;
   const [draggedPlayerIndex, setDraggedPlayerIndex] = useState<number | null>(
     null,
   );
@@ -52,14 +60,43 @@ export const GameInfo = (props: GameInfoProps) => {
   const getEditPlayerNameUI = () => {
     return (
       <TextInputArea
-        startingValue={me.name}
-        setNewValue={(newValue) => setMyUpdatedName(newValue)}
-        placeholder="Enter your name"
+        startingValue={editingPlayer?.name ?? ""}
+        setNewValue={(newValue) => setEditedPlayerName(newValue)}
+        placeholder="Enter player name"
         onEnter={() => {
-          editMyName(myUpdatedName!);
-          setShowEditPlayerUI(false);
+          if (editingPlayer) {
+            editPlayerName(editingPlayer, editedPlayerName);
+            setEditingPlayer(null);
+          }
         }}
-        isValid={(myUpdatedName?.length ?? 0) > 0}
+        isValid={(editedPlayerName?.length ?? 0) > 0}
+        autoFocus={true}
+      />
+    );
+  };
+
+  const getAddPlayerUI = () => {
+    return (
+      <TextInputArea
+        startingValue=""
+        setNewValue={(newValue) => setNewPlayerName(newValue)}
+        placeholder="Enter player name"
+        onEnter={() => {
+          if (!game) return;
+          if ((game.playerRoundInfo?.length ?? 0) >= MAX_PLAYERS) {
+            // Prevent adding when game is full
+            setShowAddPlayerUI(false);
+            setNewPlayerName("");
+            return;
+          }
+
+          if (newPlayerName) {
+            addPlayer!(newPlayerName);
+            setShowAddPlayerUI(false);
+            setNewPlayerName("");
+          }
+        }}
+        isValid={(newPlayerName?.length ?? 0) > 0}
         autoFocus={true}
       />
     );
@@ -138,14 +175,56 @@ export const GameInfo = (props: GameInfoProps) => {
 
   return (
     <Stack gap={2}>
-      {showEditPlayerUI && (
+      {editingPlayer && (
         <SimpleModal
           title={"Edit Player Name"}
           content={getEditPlayerNameUI()}
           defaultButtonContent={"Save"}
-          onAccept={() => editMyName(myUpdatedName!)}
-          onCancel={() => setShowEditPlayerUI(false)}
-          allowAccept={!!myUpdatedName}
+          onAccept={() => {
+            editPlayerName(editingPlayer, editedPlayerName);
+            setEditingPlayer(null);
+          }}
+          onCancel={() => setEditingPlayer(null)}
+          allowAccept={editedPlayerName.length > 0}
+          show={true}
+        />
+      )}
+      {playerToRemove && (
+        <SimpleModal
+          title={"Remove Player"}
+          content={
+            <>
+              Are you sure you want to remove{" "}
+              <strong>{playerToRemove.name}</strong>?
+            </>
+          }
+          defaultButtonContent={"Remove"}
+          alternateButtonContent={"Cancel"}
+          onAccept={() => {
+            removePlayer!(playerToRemove.id);
+            setPlayerToRemove(null);
+          }}
+          onCancel={() => setPlayerToRemove(null)}
+          show={true}
+        />
+      )}
+      {showAddPlayerUI && (
+        <SimpleModal
+          title={"Add Player"}
+          content={getAddPlayerUI()}
+          defaultButtonContent={"Add"}
+          onAccept={() => {
+            if (newPlayerName) {
+              addPlayer!(newPlayerName);
+              setShowAddPlayerUI(false);
+              setNewPlayerName("");
+            }
+          }}
+          onCancel={() => {
+            setShowAddPlayerUI(false);
+            setNewPlayerName("");
+          }}
+          allowAccept={newPlayerName.length > 0}
           show={true}
         />
       )}
@@ -268,8 +347,8 @@ export const GameInfo = (props: GameInfoProps) => {
             }}
           >
             {game?.playerRoundInfo.map((x, index) => {
-              const isCaptain = game.playerRoundInfo[0].player.id === me.id;
-              const canReorder = isCaptain && game.playerRoundInfo.length > 2;
+              const iAmCaptain = game.playerRoundInfo[0].player.id === me.id;
+              const canReorder = iAmCaptain && game.playerRoundInfo.length > 2;
               const isFirstPlayer = index === 0;
               const showInsertionBefore =
                 dragOverIndex === index && draggedPlayerIndex !== null;
@@ -304,13 +383,26 @@ export const GameInfo = (props: GameInfoProps) => {
                     )}
                     <span className="playerName">{x.player.name}</span>
                     <div className="playerActions">
-                      {me.id === x.player.id && (
+                      {(me.id === x.player.id || iAmCaptain) && (
                         <Button
                           variant="link"
                           className="textLink"
-                          onClick={() => setShowEditPlayerUI(true)}
+                          onClick={() => {
+                            setEditingPlayer(x.player);
+                            setEditedPlayerName(x.player.name);
+                          }}
                         >
                           edit
+                        </Button>
+                      )}
+                      {iAmCaptain && !isFirstPlayer && removePlayer && (
+                        <Button
+                          variant="link"
+                          className="textLink removePlayerButton"
+                          onClick={() => setPlayerToRemove(x.player)}
+                          aria-label={`Remove ${x.player.name}`}
+                        >
+                          <XCircle size={16} />
                         </Button>
                       )}
                     </div>
@@ -328,6 +420,19 @@ export const GameInfo = (props: GameInfoProps) => {
             />
           </Stack>
         </Stack>
+      )}
+      {addPlayer && game?.status === GameStatus.acceptingPlayers && (
+        <Button
+          className="buttonStyle add-player-button"
+          variant="primary"
+          disabled={(game.playerRoundInfo?.length ?? 0) >= MAX_PLAYERS}
+          onClick={() => {
+            setShowAddPlayerUI(true);
+            setNewPlayerName("");
+          }}
+        >
+          Add Player
+        </Button>
       )}
       {startGame && (
         <Button

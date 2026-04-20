@@ -12,7 +12,7 @@ const GameMoveNextPhaseInternal = `${BaseGameUriInternal}/GAME_ID/movenext?playe
 const GameMovePreviousPhaseInternal = `${BaseGameUriInternal}/GAME_ID/moveprevious?playerId=PLAYER_ID&knownHash=KNOWN_HASH`;
 const GameSetBidInternal = `${BaseGameUriInternal}/GAME_ID/setbid?playerId=PLAYER_ID&bid=BID&knownHash=KNOWN_HASH`;
 const GameSetScoreInternal = `${BaseGameUriInternal}/GAME_ID/setscore?playerId=PLAYER_ID&trickstaken=TRICKS_TAKEN&bonus=BONUS&knownHash=KNOWN_HASH`;
-const GameRemovePlayerInternal = `${BaseGameUriInternal}/GAME_ID/players/PLAYER_ID?knownHash=KNOWN_HASH`;
+const GameRemovePlayerInternal = `${BaseGameUriInternal}/GAME_ID/players/PLAYER_ID?knownHash=KNOWN_HASH&requestingPlayerId=REQUESTING_PLAYER_ID`;
 const GameReorderPlayersInternal = `${BaseGameUriInternal}/GAME_ID/players/reorder`;
 const GameGetSingleGameIdInternal = `${BaseGameUriInternal}/getid`;
 
@@ -149,11 +149,13 @@ export function GameGetSingleGameIdUri() {
 export function GameRemovePlayerUri(
   gameId: string,
   playerId: string,
+  requestingPlayerId: string,
   currentHash: string,
 ) {
   return formatUriString(GameRemovePlayerInternal, [
     { key: "GAME_ID", value: gameId },
     { key: "PLAYER_ID", value: playerId },
+    { key: "REQUESTING_PLAYER_ID", value: requestingPlayerId },
     { key: "KNOWN_HASH", value: currentHash },
   ]);
 }
@@ -167,7 +169,8 @@ export function GameReorderPlayersUri(gameId: string) {
 export function RemovePlayerUri(
   gameId: string,
   playerId: string,
+  requestingPlayerId: string,
   currentHash: string,
 ) {
-  return GameRemovePlayerUri(gameId, playerId, currentHash);
+  return GameRemovePlayerUri(gameId, playerId, requestingPlayerId, currentHash);
 }

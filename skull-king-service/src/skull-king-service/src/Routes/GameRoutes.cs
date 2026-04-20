@@ -96,7 +96,7 @@ public static class GameRoutes
     .WithName("AddPlayerToGame")
     .RequireCors(cors);
 
-    app.MapDelete("/games/{id}/players/{playerId}", async (GameId id, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapDelete("/games/{id}/players/{playerId}", async (GameId id, Guid playerId, string knownHash, Guid requestingPlayerId, HttpContext httpContext, SkullKingDbContext db) =>
     {
       // Check the knownHash compared to current stored hash
       // Do not allow updates if the user's hash doesn't match the current hash
@@ -111,6 +111,14 @@ public static class GameRoutes
       if (game is null)
       {
         httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+      }
+
+      // Allow only the player removing themselves, or the game owner removing another player
+      var ownerId = game.PlayerRoundInfo.First().Player!.Id;
+      if (requestingPlayerId != playerId && requestingPlayerId != ownerId)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
         return;
       }
 
