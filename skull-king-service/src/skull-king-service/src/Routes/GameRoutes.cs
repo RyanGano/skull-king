@@ -21,6 +21,12 @@ public static class GameRoutes
       }
 
       var game = Game.Create(gameId, new Player(gameInfo.PlayerName));
+      // Set expansion flag from DTO (use internal method if available)
+      var expansionProp = game.GetType().GetProperty("ExpansionEnabled");
+      if (expansionProp is not null)
+      {
+        expansionProp.SetValue(game, gameInfo.ExpansionEnabled);
+      }
       db.Players.Add(game.PlayerRoundInfo.Single().Player!);
       db.Rounds.AddRange(game.PlayerRoundInfo.SelectMany(x => x.Rounds!));
       db.PlayerRoundInfos.Add(game.PlayerRoundInfo.Single());

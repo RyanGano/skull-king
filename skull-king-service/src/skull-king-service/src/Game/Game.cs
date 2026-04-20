@@ -22,6 +22,7 @@ public record Game
     {
       Id = new GameId().Value,
       EditablePlayerRoundInfo = new List<PlayerRounds> { PlayerRounds.Create(controllingPlayer) },
+      ExpansionEnabled = false,
     };
   }
 
@@ -31,14 +32,18 @@ public record Game
     {
       Id = gameId.Value,
       EditablePlayerRoundInfo = new List<PlayerRounds> { PlayerRounds.Create(controllingPlayer) },
+      ExpansionEnabled = false,
     };
   }
+
+  public bool ExpansionEnabled { get; private set; }
 
   public PlayerRounds AddPlayer(Player player)
   {
     if (PlayerRoundInfo.Any(x => x.Player == player))
       throw new ArgumentException("Player already in game");
-    if (PlayerRoundInfo.Count == c_maxPlayers)
+    var maxPlayers = ExpansionEnabled ? c_maxPlayersWithExpansion : c_maxPlayers;
+    if (PlayerRoundInfo.Count == maxPlayers)
       throw new ArgumentException($"Cannot have more than {c_maxPlayers} in a game.");
     if (Status != GameStatus.AcceptingPlayers)
       throw new ArgumentException($"Cannot add player at this time.");
@@ -199,6 +204,7 @@ public record Game
       Status = Status,
       PlayerRoundInfo = PlayerRoundInfo.Select(x => x.MapToDto()).ToList(),
       IsRandomBid = this.IsRandomBid,
+      ExpansionEnabled = this.ExpansionEnabled,
     };
   }
 
@@ -235,6 +241,7 @@ public record Game
 
   private const int c_minPlayers = 2;
   private const int c_maxPlayers = 8;
+  private const int c_maxPlayersWithExpansion = 9;
   private const int c_minRandomPlayers = 3;
   private List<PlayerRounds> EditablePlayerRoundInfo { get; init; }
 }

@@ -10,7 +10,10 @@ import { GameStatus } from "../../types/game";
 import { TutorialContext } from "../../TutorialContext";
 
 interface GameSetupProps {
-  createGame?: (playerName: string) => Promise<void>;
+  createGame?: (
+    playerName: string,
+    expansionEnabled?: boolean,
+  ) => Promise<void>;
   joinGame?: (gameId: string, playerName: string) => Promise<void>;
   defaultGameId?: string;
   playerId?: string;
@@ -47,6 +50,7 @@ export const GameSetup = (props: GameSetupProps) => {
   >();
   const [joinError, setJoinError] = useState<string | undefined>();
   const [playerName, setPlayerName] = useState<string | undefined>();
+  const [expansionEnabled, setExpansionEnabled] = useState<boolean>(false);
   const lastCheckedPathRef = useRef<string | null>(null);
 
   const checkForId = useCallback(async () => {
@@ -174,20 +178,33 @@ export const GameSetup = (props: GameSetupProps) => {
   // create UI
   const getCreateGameUI = () => {
     return (
-      <TextInputArea
-        startingValue={playerName}
-        setNewValue={(newValue) => setPlayerName(newValue)}
-        placeholder="Enter your name"
-        onEnter={(entered) => {
-          const name = entered ?? playerName;
-          if (name && name.length) {
-            createGame?.(name);
-            setShowCreateGameUI(false);
-          }
-        }}
-        isValid={(playerName?.length ?? 0) > 0}
-        autoFocus={true}
-      />
+      <div>
+        <TextInputArea
+          startingValue={playerName}
+          setNewValue={(newValue) => setPlayerName(newValue)}
+          placeholder="Enter your name"
+          onEnter={(entered) => {
+            const name = entered ?? playerName;
+            if (name && name.length) {
+              createGame?.(name, expansionEnabled);
+              setShowCreateGameUI(false);
+            }
+          }}
+          isValid={(playerName?.length ?? 0) > 0}
+          autoFocus={true}
+        />
+
+        <div style={{ marginTop: "0.75rem" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={expansionEnabled}
+              onChange={(e) => setExpansionEnabled(e.target.checked)}
+            />
+            <span>Include expansion</span>
+          </label>
+        </div>
+      </div>
     );
   };
 
@@ -288,7 +305,7 @@ export const GameSetup = (props: GameSetupProps) => {
             content={getCreateGameUI()}
             defaultButtonContent={"Start"}
             onAccept={() => {
-              if (playerName) createGame?.(playerName);
+              if (playerName) createGame?.(playerName, expansionEnabled);
               closeCreateUI();
             }}
             onCancel={() => closeCreateUI()}

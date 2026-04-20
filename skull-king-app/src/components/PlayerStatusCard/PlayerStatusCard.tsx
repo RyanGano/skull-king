@@ -50,7 +50,7 @@ const BONUS_OPTIONS: BonusOption[] = [
     id: "davyjoneslocker",
     label: "Creature destroyed by Davy Jones' Locker",
     points: 20,
-    maxCount: 4,
+    maxCount: 3,
   },
   { id: "goldcoins", label: "Gold Coins", points: 20, maxCount: 2 },
 ];
@@ -58,6 +58,7 @@ const BONUS_OPTIONS: BonusOption[] = [
 export interface PlayerStatusCardProps {
   playerRounds: PlayerRounds;
   isMe: boolean;
+  expansionEnabled?: boolean;
   myPlace?: number;
   dealer?: boolean;
   turnPhase: GameStatus;
@@ -77,6 +78,7 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
     myPlace,
     onTutorialContextChanged,
   } = props;
+  const { expansionEnabled } = props;
   const [showBidUI, setShowBidUI] = useState<boolean>(false);
   const [showScoreUI, setShowScoreUI] = useState<boolean>(false);
   const [currentBonus, setCurrentBonus] = useState<number>(0);
@@ -149,10 +151,38 @@ export const PlayerStatusCard = (props: PlayerStatusCardProps) => {
       bonusCounts[id] = (bonusCounts[id] || 0) + 1;
     });
 
-    // Only show options in dropdown if not at maxCount
-    const availableOptions = BONUS_OPTIONS.filter(
-      (option) => (bonusCounts[option.id] || 0) < option.maxCount,
-    );
+    // Apply expansion rules: adjust availability based on expansionEnabled
+    const availableOptions = BONUS_OPTIONS.filter((option) => {
+      // Copy base max count
+      let max = option.maxCount;
+
+      // Special rules when expansion is off
+      if (!expansionEnabled) {
+        if (option.id === "pirate") {
+          // priate: max 6 without expansion, 7 with expansion
+          max = 6;
+        }
+        if (option.id === "special8") {
+          return false; // disable special8 without expansion
+        }
+        if (option.id === "special7") {
+          return false; // disable special7 without expansion
+        }
+        if (option.id === "firstmate") {
+          return false; // disable firstmate without expansion
+        }
+        if (option.id === "davyjoneslocker") {
+          return false; // disable davyjoneslocker without expansion
+        }
+      } else {
+        // expansion enabled: special rules
+        if (option.id === "pirate") {
+          max = 7;
+        }
+      }
+
+      return (bonusCounts[option.id] || 0) < max;
+    });
 
     const handleBonusSelect = (optionId: string) => {
       if (!allowBonus) return;

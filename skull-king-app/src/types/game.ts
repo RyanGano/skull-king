@@ -30,6 +30,7 @@ export type Game = {
   playerRoundInfo: PlayerRounds[];
   hash: string;
   isRandomBid?: boolean;
+  expansionEnabled?: boolean;
 };
 
 export type PlayerRounds = {

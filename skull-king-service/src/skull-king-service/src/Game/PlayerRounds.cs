@@ -9,7 +9,10 @@ public record PlayerRounds
     if (Rounds!.Count == 10)
       throw new InvalidOperationException("Cannot have more than 10 rounds");
 
-    var newRound = new Round(int.Min(Rounds.Count + 1, playerCount == 8 ? 8 : 10));
+    // If the game has 9 players (expansion), allow up to 9 maxBid for middle rounds
+    // playerCount is the current player count passed from Game
+    var maxForThisRound = playerCount == 8 ? 8 : 10;
+    var newRound = new Round(int.Min(Rounds.Count + 1, maxForThisRound));
     EditablePlayerRounds!.Add(newRound);
     return newRound;
   }

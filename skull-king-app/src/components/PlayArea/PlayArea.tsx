@@ -196,6 +196,7 @@ export const PlayArea = (props: PlayAreaProps) => {
               isMe={x.player.id === me.id}
               myPlace={getMyPlace(game, x.player.id)}
               playerRounds={x}
+              expansionEnabled={game.expansionEnabled}
               turnPhase={game.status}
               onBidChange={
                 (x.player.id === me.id || iAmCaptain) &&

@@ -368,8 +368,11 @@ const App = () => {
   }, [urlGameId, urlPlayerId, hasWarmedUp, navigate, startUpdateTimer, game]);
 
   const createGame = useCallback(
-    async (playerName: string) => {
-      const personDto = { PlayerName: playerName };
+    async (playerName: string, expansionEnabled: boolean = false) => {
+      const personDto = {
+        PlayerName: playerName,
+        ExpansionEnabled: expansionEnabled,
+      };
 
       const result = await callPostRoute(
         CreateNewGameUri(),
