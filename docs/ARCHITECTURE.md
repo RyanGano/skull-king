@@ -5,7 +5,7 @@ For definitions of domain terms (game, round, bid, trick, captain, hash, etc.) s
 A scoring app for the [Skull King](https://www.grandpabecksgames.com/pages/skull-king) card game. Two independently-deployed halves in one repo:
 
 - `skull-king-app/` — React + TypeScript + Vite single-page app (Azure Static Web Apps)
-- `skull-king-service/` — .NET 8 minimal-API backend (Azure App Service)
+- `skull-king-service/` — .NET 10 minimal-API backend (Azure App Service)
 
 ## Commands
 

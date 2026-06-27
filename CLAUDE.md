@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Stack: typescript, react, yarn (never npm), vite, c#, .NET 8 minimal API, EF Core (in-memory), xUnit
+Stack: typescript, react, yarn (never npm), vite, c#, .NET 10 minimal API, EF Core (in-memory), xUnit
 
 Process for changes: Edit, build, test, fix tests, repeat, commit, push, watch the GitHub Actions build and fix if needed.
 
