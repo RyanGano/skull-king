@@ -16,7 +16,7 @@ interface PlayAreaProps {
   moveToNextGameStatus: (hash?: string) => Promise<void>;
   moveToPreviousGameStatus: (hash?: string) => Promise<void>;
   gameChanging: boolean;
-  getCurrentHash: () => Promise<string>;
+  getCurrentHash: () => Promise<string | undefined>;
   showRestartButtons?: boolean;
   onRestartGame?: () => Promise<void>;
   onTutorialContextChanged?: (context: TutorialContext) => void;

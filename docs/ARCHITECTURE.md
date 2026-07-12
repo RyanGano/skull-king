@@ -39,6 +39,8 @@ A scoring app for the [Skull King](https://www.grandpabecksgames.com/pages/skull
 
 Minimal API; all routes registered in `src/Routes/GameRoutes.cs` via `GameRoutes.Register(app, cors)`. Persistence is **EF Core InMemory** (`SkullKingDbContext`) — there is no real database; all game state is lost on restart. This is intentional for a transient, single-server game tracker.
 
+Because state is in-memory, the App Service must stay warm or in-progress games are lost. An external **UptimeRobot** monitor pings the warmup route (`/`, supports GET and HEAD) every ~5 minutes to prevent idle recycles. Platform restarts/deploys still wipe all games; the client tolerates brief outages (see frontend notes below) but cannot recover a wiped game.
+
 ### Domain model (`src/Game/`)
 
 - `Game` — aggregate root (a C# `record`). Holds `Status` (`AcceptingPlayers → BiddingOpen → BiddingClosed → … → GameOver`), the player list, and game options (`IsRandomBid`, `Difficulty`, `ExpansionEnabled`). State transitions go through `StartGame`, `MoveToNextPhase`, `MoveToPreviousPhase`. A game is exactly 10 rounds; 2–8 players (9 with the expansion).
@@ -58,7 +60,8 @@ DTOs in `src/Dtos/` are the wire format (`MapToDto()`); domain objects are not s
 ## Frontend architecture
 
 - `App.tsx` is the single stateful container — it owns the `game` and `me` (current player) state and all the API-calling callbacks (create/join/start/bid/score/reorder/exit). Child components (`GameSetup`, `GameInfo`, `PlayArea`, `PlayerStatusCard`) are largely presentational and receive callbacks as props.
-- **Polling, not websockets:** once in a game, `startUpdateTimer` polls `GET /games/{id}` every 1 second, sending `knownHash` so most polls return 304. The current hash is tracked in `currentHashRef`.
+- **Polling, not websockets:** once in a game, `startUpdateTimer` polls `GET /games/{id}` every 1 second, sending `knownHash` so most polls return 304. The current hash is tracked in `currentHashRef`. Polling is resilient to transient backend outages: network errors are ignored, and the game is only declared lost after several consecutive 404s; the deep-link rejoin also retries before giving up.
+- While a game is underway the app holds a screen wake lock (`src/utils/use-wake-lock.ts`) so phones keep polling, and a `visibilitychange` handler refreshes immediately when the app returns to the foreground.
 - All HTTP goes through the thin `axios` wrappers in `src/utils/api-utils.ts` (`callGetRoute`/`callPostRoute`/`callPutRoute`/`callDeleteRoute`), which normalize success/error into `{ data, status, statusText }`.
 - Routing: URL is `/{gameId}/{playerId}`; on load `App` validates the player is in the game and joins the poll, else redirects home.
 - Game identity (which player "me" is) lives in state/URL; `cookie-utils.ts` is only used to remember whether the tutorial prompt has been shown.
