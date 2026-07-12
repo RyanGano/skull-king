@@ -16,6 +16,7 @@ import {
   callDeleteRoute,
 } from "./utils/api-utils";
 import { getCookie, setCookie } from "./utils/cookie-utils";
+import { useWakeLock } from "./utils/use-wake-lock";
 import {
   AddPlayerUri,
   CreateNewGameUri,
@@ -40,6 +41,12 @@ import { NavLink } from "react-bootstrap";
 import { Button } from "react-bootstrap";
 import { TutorialContext } from "./TutorialContext";
 
+// How many consecutive 404 polls to tolerate before declaring the game lost,
+// so a transient blip (e.g. the backend restarting) doesn't end the session
+const MAX_CONSECUTIVE_404S = 5;
+
+type GameLostReason = "gameGone" | "playerRemoved";
+
 const App = () => {
   const navigate = useNavigate();
   const { gameId: urlGameId, playerId: urlPlayerId } = useParams<{
@@ -50,6 +57,7 @@ const App = () => {
   const [me, setMe] = useState<Player>();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const currentHashRef = useRef<string | undefined>();
+  const consecutive404sRef = useRef(0);
   const [showExitPopup, setShowExitPopup] = useState(false);
   const [showCaptainCannotLeavePopup, setShowCaptainCannotLeavePopup] =
     useState(false);
@@ -57,6 +65,8 @@ const App = () => {
   const [hasWarmedUp, setHasWarmedUp] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
   const [showGameEndedMessage, setShowGameEndedMessage] = useState(false);
+  const [gameLostReason, setGameLostReason] =
+    useState<GameLostReason>("gameGone");
   const [gameEndedAt, setGameEndedAt] = useState<Date | null>(null);
   const [showRestartButtons, setShowRestartButtons] = useState(false);
   // Controls whether tutorial content is currently visible on screen
@@ -71,6 +81,9 @@ const App = () => {
   >(new Set());
   const [showTutorialPrompt, setShowTutorialPrompt] = useState(false);
   const footerRef = useRef<HTMLDivElement>(null);
+
+  // Keep the screen awake while a game is underway so the phone keeps polling
+  useWakeLock(!!game && game.status !== GameStatus.gameOver);
 
   useEffect(() => {
     if (hasWarmedUp) {
@@ -226,92 +239,107 @@ const App = () => {
     }
   }, [tutorialMode, showTutorial]);
 
+  // End the session with a message explaining why, then head back to port
+  const endGameSession = useCallback(
+    (reason: GameLostReason) => {
+      setGame(null);
+      setMe(undefined);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      currentHashRef.current = undefined;
+      consecutive404sRef.current = 0;
+      setGameEndedAt(null);
+      setShowRestartButtons(false);
+      setGameLostReason(reason);
+      setShowGameEndedMessage(true);
+      // Show message for a while then redirect
+      setTimeout(() => {
+        setShowGameEndedMessage(false);
+        navigate("/");
+      }, 10000);
+    },
+    [navigate],
+  );
+
+  // Shared handling for game GET responses; returns the game when one was received
+  const processGameResponse = useCallback(
+    (result: { status?: number; data?: Game }): Game | undefined => {
+      if (result.status === 404) {
+        // Don't give up on a single 404 - the backend may be restarting
+        consecutive404sRef.current += 1;
+        if (consecutive404sRef.current >= MAX_CONSECUTIVE_404S) {
+          endGameSession("gameGone");
+        }
+        return undefined;
+      }
+      if (result.status === 304) {
+        consecutive404sRef.current = 0;
+        return undefined;
+      }
+      if (result.status !== 200 || !result.data) {
+        // Network blip or transient server error - keep polling
+        return undefined;
+      }
+      consecutive404sRef.current = 0;
+      const gameData = result.data;
+      if (
+        me &&
+        !gameData.playerRoundInfo.some((pri) => pri.player?.id === me.id)
+      ) {
+        endGameSession("playerRemoved");
+        return undefined;
+      }
+      setGame(gameData);
+      return gameData;
+    },
+    [me, endGameSession],
+  );
+
   const updateGame = useCallback(
     async (id: string, currentHash: string) => {
       const currentGame = await callGetRoute(GetGameUri(id, currentHash));
-      if (currentGame.status === 404) {
-        // Game not found, probably deleted because everyone left
-        setGame(null);
-        setMe(undefined);
-        clearInterval(timerRef.current!);
-        timerRef.current = null;
-        currentHashRef.current = undefined;
-        setShowGameEndedMessage(true);
-        // Show message for 3 seconds then redirect
-        setTimeout(() => {
-          setShowGameEndedMessage(false);
-          navigate("/");
-        }, 10000);
-        return;
-      }
-      if (currentGame.status !== 304) {
-        const gameData = currentGame.data as Game;
-        if (
-          me &&
-          !gameData.playerRoundInfo.some((pri) => pri.player?.id === me.id)
-        ) {
-          // Player no longer in the game
-          setGame(null);
-          setMe(undefined);
-          clearInterval(timerRef.current!);
-          timerRef.current = null;
-          currentHashRef.current = undefined;
-          navigate("/");
-          return;
-        }
-        setGame(gameData);
+      const gameData = processGameResponse(currentGame);
 
-        // Check if game just ended
-        if (
-          gameData.status === GameStatus.gameOver &&
-          game?.status !== GameStatus.gameOver
-        ) {
-          setGameEndedAt(new Date());
-        }
+      // Check if game just ended
+      if (
+        gameData &&
+        gameData.status === GameStatus.gameOver &&
+        game?.status !== GameStatus.gameOver
+      ) {
+        setGameEndedAt(new Date());
       }
     },
-    [me, navigate, game?.status],
+    [processGameResponse, game?.status],
   );
 
   const getCurrentHash = useCallback(
     async (id: string) => {
       const currentGame = await callGetRoute(GetGameUri(id));
-      if (currentGame.status === 404) {
-        // Game not found, probably deleted because everyone left
-        setGame(null);
-        setMe(undefined);
-        clearInterval(timerRef.current!);
-        timerRef.current = null;
-        currentHashRef.current = undefined;
-        setShowGameEndedMessage(true);
-        // Show message for 3 seconds then redirect
-        setTimeout(() => {
-          setShowGameEndedMessage(false);
-          navigate("/");
-        }, 3000);
-        return;
-      }
-      if (currentGame.status !== 304) {
-        const gameData = currentGame.data as Game;
-        if (
-          me &&
-          !gameData.playerRoundInfo.some((pri) => pri.player?.id === me.id)
-        ) {
-          // Player no longer in the game
-          setGame(null);
-          setMe(undefined);
-          clearInterval(timerRef.current!);
-          timerRef.current = null;
-          currentHashRef.current = undefined;
-          navigate("/");
-          return;
-        }
-        setGame(currentGame.data);
-        return currentGame.data.hash;
-      }
+      const gameData = processGameResponse(currentGame);
+      return gameData?.hash;
     },
-    [me, navigate],
+    [processGameResponse],
   );
+
+  // When the app returns to the foreground, refresh right away instead of
+  // waiting for the (possibly throttled) polling interval to fire
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === "visible" &&
+        game?.id &&
+        timerRef.current
+      ) {
+        updateGame(game.id, currentHashRef.current ?? "");
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [game?.id, updateGame]);
 
   const startUpdateTimer = useCallback(
     (id: string, currentHash?: string) => {
@@ -330,14 +358,20 @@ const App = () => {
 
   // Handle URL-based game and player loading
   useEffect(() => {
+    let cancelled = false;
+
     const loadFromUrl = async () => {
       // If we have both gameId and playerId in URL, try to load the game and validate the player
       if (urlGameId && urlPlayerId) {
-        try {
+        // Retry a few times so a backend that is still warming up doesn't lose the session
+        for (let attempt = 0; attempt < 3; attempt++) {
           const gameResult = await callGetRoute(GetGameUri(urlGameId));
+          if (cancelled) {
+            return;
+          }
           if (gameResult.status === 200) {
-            const gameData = gameResult.data;
-            const player = (gameData as Game).playerRoundInfo?.find(
+            const gameData = gameResult.data as Game;
+            const player = gameData.playerRoundInfo?.find(
               (pri) => pri.player?.id === urlPlayerId,
             )?.player;
 
@@ -346,16 +380,16 @@ const App = () => {
               setMe(player);
               startUpdateTimer(urlGameId, gameData.hash);
             } else {
-              // Player not found in game, redirect to home
-              navigate("/");
+              // Player not found in game
+              endGameSession("playerRemoved");
             }
-          } else {
-            // Game not found, redirect to home
-            navigate("/");
+            return;
           }
-        } catch (error) {
-          // Error loading, redirect to home
-          navigate("/");
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+        if (!cancelled) {
+          // Game not found after retries
+          endGameSession("gameGone");
         }
       }
       // If we only have gameId, the GameSetup component will handle showing the join UI
@@ -365,7 +399,18 @@ const App = () => {
     if (hasWarmedUp && !game) {
       loadFromUrl();
     }
-  }, [urlGameId, urlPlayerId, hasWarmedUp, navigate, startUpdateTimer, game]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    urlGameId,
+    urlPlayerId,
+    hasWarmedUp,
+    startUpdateTimer,
+    game,
+    endGameSession,
+  ]);
 
   const createGame = useCallback(
     async (playerName: string, expansionEnabled: boolean = false) => {
@@ -829,7 +874,11 @@ const App = () => {
 
       {/* Game Ended Message */}
       <SimpleModal
-        title={"Arrr! The Crew Abandoned Ship!"}
+        title={
+          gameLostReason === "playerRemoved"
+            ? "Ye Walked the Plank!"
+            : "Arrr! The Game Be Lost at Sea!"
+        }
         content={
           <>
             <p
@@ -839,7 +888,9 @@ const App = () => {
                 textAlign: "center",
               }}
             >
-              All yer mates have left the game, ye scurvy dogs!
+              {gameLostReason === "playerRemoved"
+                ? "Ye be no longer part of this crew, ye scurvy dog!"
+                : "This game can no longer be found, ye scurvy dogs!"}
             </p>
             <p
               style={{
@@ -849,7 +900,9 @@ const App = () => {
                 marginTop: "1rem",
               }}
             >
-              The game has been disbanded. Find a new crew to sail with!
+              {gameLostReason === "playerRemoved"
+                ? "Find a new crew to sail with!"
+                : "The crew may have disbanded, or the ship went down. Find a new crew to sail with!"}
             </p>
           </>
         }
