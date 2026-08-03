@@ -33,7 +33,7 @@ public record PlayerRounds
     {
       Id = Guid.NewGuid(),
       Player = player,
-      EditablePlayerRounds = new List<Round>()
+      EditablePlayerRounds = []
     };
   }
 
@@ -88,7 +88,7 @@ public record PlayerRounds
 
   private PlayerRounds()
   {
-    EditablePlayerRounds = new List<Round>();
+    EditablePlayerRounds = [];
   }
 
   private List<Round> EditablePlayerRounds { get; init; }
