@@ -412,7 +412,7 @@ const getTutorialSteps = (
   }
 };
 
-export const Tutorial: React.FC<TutorialProps> = ({
+export const Tutorial = ({
   show,
   onClose,
   onComplete,
@@ -420,7 +420,7 @@ export const Tutorial: React.FC<TutorialProps> = ({
   playerCount,
   iAmCaptain,
   isRandomBid,
-}) => {
+}: TutorialProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const [highlightedElement, setHighlightedElement] = useState<Element | null>(
