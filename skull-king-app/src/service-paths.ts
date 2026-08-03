@@ -16,7 +16,7 @@ const GameRemovePlayerInternal = `${BaseGameUriInternal}/GAME_ID/players/PLAYER_
 const GameReorderPlayersInternal = `${BaseGameUriInternal}/GAME_ID/players/reorder`;
 const GameGetSingleGameIdInternal = `${BaseGameUriInternal}/getid`;
 
-const CurrentBaseUri = import.meta.env.VITE_REACT_APP_BASE_SERVICE_URI;
+const CurrentBaseUri = import.meta.env["VITE_REACT_APP_BASE_SERVICE_URI"];
 
 function formatUriString(
   input: string,
