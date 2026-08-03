@@ -1,7 +1,12 @@
 import { Button, Stack } from "react-bootstrap";
 import classNames from "classnames";
 import { GripVertical, XCircle } from "react-bootstrap-icons";
-import { Game, GameDifficulty, GameStatus, Player } from "../../types/game";
+import {
+  type Game,
+  GameDifficulty,
+  GameStatus,
+  type Player,
+} from "../../types/game";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SimpleModal } from "../../common/simple-modal";
 import { TextInputArea } from "../../common/input-area/text-input-area";

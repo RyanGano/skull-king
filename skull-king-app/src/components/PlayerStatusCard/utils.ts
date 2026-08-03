@@ -1,4 +1,4 @@
-import { Round } from "../../types/game";
+import type { Round } from "../../types/game";
 
 export const calculateRoundScore = (round: Round): number => {
   // If the round hasn't been scored yet, just return 0;
