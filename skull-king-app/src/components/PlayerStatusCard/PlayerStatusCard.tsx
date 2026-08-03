@@ -2,7 +2,7 @@ import Stack from "react-bootstrap/esm/Stack";
 import { useEffect, useState } from "react";
 import classNames from "classnames";
 import { SimpleModal } from "../../common/simple-modal";
-import { GameStatus, PlayerRounds, Round } from "../../types/game";
+import { GameStatus, type PlayerRounds, type Round } from "../../types/game";
 import Dropdown from "react-bootstrap/Dropdown";
 import { calculateRoundScore } from "./utils";
 

@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { Game, GameStatus, Player } from "../../types/game";
+import { type Game, GameStatus, type Player } from "../../types/game";
 import { PlayerStatusCard } from "../PlayerStatusCard/PlayerStatusCard";
 import { calculateRoundScore } from "../PlayerStatusCard/utils";
 

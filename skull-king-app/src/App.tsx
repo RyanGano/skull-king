@@ -30,7 +30,12 @@ import {
   RemovePlayerUri,
   StartGameUri,
 } from "./service-paths";
-import { Game, GameDifficulty, GameStatus, Player } from "./types/game";
+import {
+  type Game,
+  GameDifficulty,
+  GameStatus,
+  type Player,
+} from "./types/game";
 import { PlayArea } from "./components/PlayArea";
 import { GameInfo } from "./components/GameInfo";
 import { GameSetup } from "./components/GameSetup";
