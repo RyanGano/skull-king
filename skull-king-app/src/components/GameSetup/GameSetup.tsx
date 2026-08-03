@@ -124,7 +124,7 @@ export const GameSetup = (props: GameSetupProps) => {
           // Game doesn't exist
           setJoinError("Game not found. Please check the game ID.");
         }
-      } catch (error) {
+      } catch {
         // Error loading game
         setJoinError("Unable to check game status. Please try again.");
       }
@@ -163,7 +163,7 @@ export const GameSetup = (props: GameSetupProps) => {
             setShowGameNotFoundUI(true);
             notifySetupChanged(true);
           }
-        } catch (error) {
+        } catch {
           // Error loading game
           setGameId(defaultGameId);
           setShowGameNotFoundUI(true);
