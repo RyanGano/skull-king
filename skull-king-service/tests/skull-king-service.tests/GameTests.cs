@@ -22,7 +22,7 @@ public class GameTests
     var newPlayer = new Player("Bob");
     game.AddPlayer(newPlayer);
 
-    Assert.Equal(new List<Player> { controllingPlayer!, newPlayer }, game.PlayerRoundInfo.Select(x => x.Player));
+    Assert.Equal([controllingPlayer!, newPlayer], game.PlayerRoundInfo.Select(x => x.Player));
   }
 
   [Fact]
@@ -59,7 +59,7 @@ public class GameTests
 
     game.RemovePlayer(newPlayer);
 
-    Assert.Equal(new List<Player> { controllingPlayer! }, game.PlayerRoundInfo.Select(x => x.Player));
+    Assert.Equal([controllingPlayer!], game.PlayerRoundInfo.Select(x => x.Player));
   }
 
   [Fact]

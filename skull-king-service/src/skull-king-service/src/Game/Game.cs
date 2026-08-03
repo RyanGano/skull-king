@@ -21,7 +21,7 @@ public record Game
     return new Game
     {
       Id = new GameId().Value,
-      EditablePlayerRoundInfo = new List<PlayerRounds> { PlayerRounds.Create(controllingPlayer) },
+      EditablePlayerRoundInfo = [PlayerRounds.Create(controllingPlayer)],
       ExpansionEnabled = false,
     };
   }
@@ -31,7 +31,7 @@ public record Game
     return new Game
     {
       Id = gameId.Value,
-      EditablePlayerRoundInfo = new List<PlayerRounds> { PlayerRounds.Create(controllingPlayer) },
+      EditablePlayerRoundInfo = [PlayerRounds.Create(controllingPlayer)],
       ExpansionEnabled = false,
     };
   }
@@ -236,7 +236,7 @@ public record Game
   private Game()
   {
     Status = GameStatus.AcceptingPlayers;
-    EditablePlayerRoundInfo = new List<PlayerRounds>();
+    EditablePlayerRoundInfo = [];
   }
 
   private const int c_minPlayers = 2;
