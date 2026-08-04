@@ -1,5 +1,6 @@
 import Button from "react-bootstrap/esm/Button";
 import Modal from "react-bootstrap/esm/Modal";
+import type { JSX } from "react";
 
 export interface SimpleModalProps {
   title: string;
