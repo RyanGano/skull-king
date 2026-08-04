@@ -27,6 +27,13 @@ jobs:
           submodules: true
           lfs: false
 
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: skull-king-app/package.json
+          cache: yarn
+          cache-dependency-path: skull-king-app/yarn.lock
+
       - name: Install dependencies
         run: yarn install --prefer-offline
         working-directory: ./skull-king-app
