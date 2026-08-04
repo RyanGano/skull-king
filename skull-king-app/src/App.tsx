@@ -61,7 +61,7 @@ const App = () => {
   const [game, setGame] = useState<Game | null>(null);
   const [me, setMe] = useState<Player>();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const currentHashRef = useRef<string | undefined>();
+  const currentHashRef = useRef<string | undefined>(undefined);
   const consecutive404sRef = useRef(0);
   const [showExitPopup, setShowExitPopup] = useState(false);
   const [showCaptainCannotLeavePopup, setShowCaptainCannotLeavePopup] =
