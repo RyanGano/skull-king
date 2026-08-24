@@ -50,6 +50,11 @@ import { TutorialContext } from "./TutorialContext";
 // so a transient blip (e.g. the backend restarting) doesn't end the session
 const MAX_CONSECUTIVE_404S = 5;
 
+// How many times to re-read the game and retry a change that the service
+// rejected as out of date. Retrying forever leaves the spinner up with no way
+// out, so give up and tell the crew instead.
+const MAX_STALE_RETRIES = 5;
+
 type GameLostReason = "gameGone" | "playerRemoved";
 
 const App = () => {
@@ -66,6 +71,7 @@ const App = () => {
   const [showExitPopup, setShowExitPopup] = useState(false);
   const [showCaptainCannotLeavePopup, setShowCaptainCannotLeavePopup] =
     useState(false);
+  const [showChangeFailedPopup, setShowChangeFailedPopup] = useState(false);
   const [gameChanging, setChangingGame] = useState(false);
   const [hasWarmedUp, setHasWarmedUp] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
@@ -627,8 +633,10 @@ const App = () => {
     updateGame(game.id, currentHashRef.current ?? "");
   }, [game, me, updateGame]);
 
+  const reportChangeFailed = useCallback(() => setShowChangeFailedPopup(true), []);
+
   const moveToPreviousGameStatus = useCallback(
-    async (hash?: string) => {
+    async (hash?: string, attempt = 0) => {
       if (!game || !me) {
         console.log("No game or player");
         return;
@@ -640,23 +648,32 @@ const App = () => {
         GameMovePreviousPhaseUri(game.id, me.id, hash ?? game.hash),
       );
 
-      if (result.status !== 200) {
-        console.log("Could not move to previous phase");
-        if (result.status === 409) {
-          console.log("Updating data and trying again");
-          const hash = await getCurrentHash(game.id);
-          moveToPreviousGameStatus(hash);
-        }
-      } else {
+      if (result.status === 200) {
         await updateGame(game.id, currentHashRef.current ?? "");
         setChangingGame(false);
+        return;
       }
+
+      console.log("Could not move to previous phase", result.status);
+
+      if (result.status === 409 && attempt < MAX_STALE_RETRIES) {
+        console.log("Updating data and trying again");
+        const currentHash = await getCurrentHash(game.id);
+        await moveToPreviousGameStatus(currentHash, attempt + 1);
+        return;
+      }
+
+      // Nothing more to try - make sure the crew sees the game again rather
+      // than a spinner that never goes away
+      await updateGame(game.id, "");
+      setChangingGame(false);
+      reportChangeFailed();
     },
-    [game, getCurrentHash, me, updateGame],
+    [game, getCurrentHash, me, reportChangeFailed, updateGame],
   );
 
   const moveToNextGameStatus = useCallback(
-    async (hash?: string) => {
+    async (hash?: string, attempt = 0) => {
       if (!game || !me) {
         console.log("No game or player");
         return;
@@ -668,21 +685,29 @@ const App = () => {
         GameMoveNextPhaseUri(game.id, me.id, hash ?? game.hash),
       );
 
-      if (result.status !== 200) {
-        console.log("Could not move to next phase");
-        if (result.status === 409) {
-          console.log("Updating data and trying again");
-          setTimeout(async () => {
-            const hash = await getCurrentHash(game.id);
-            moveToNextGameStatus(hash);
-          }, 500);
-        }
-      } else {
-        updateGame(game.id, currentHashRef.current ?? "");
+      if (result.status === 200) {
+        await updateGame(game.id, currentHashRef.current ?? "");
         setChangingGame(false);
+        return;
       }
+
+      console.log("Could not move to next phase", result.status);
+
+      if (result.status === 409 && attempt < MAX_STALE_RETRIES) {
+        console.log("Updating data and trying again");
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const currentHash = await getCurrentHash(game.id);
+        await moveToNextGameStatus(currentHash, attempt + 1);
+        return;
+      }
+
+      // Nothing more to try - make sure the crew sees the game again rather
+      // than a spinner that never goes away
+      await updateGame(game.id, "");
+      setChangingGame(false);
+      reportChangeFailed();
     },
-    [game, getCurrentHash, me, updateGame],
+    [game, getCurrentHash, me, reportChangeFailed, updateGame],
   );
 
   const exitGame = useCallback(async () => {
@@ -742,6 +767,22 @@ const App = () => {
         onAccept={exitGame}
         onCancel={() => setShowExitPopup(false)}
         show={showExitPopup}
+        centered={false}
+        fullScreen={false}
+        backdrop={showTutorial ? false : true}
+      />
+      <SimpleModal
+        title={"The Change Was Not Recorded"}
+        content={
+          <>
+            The ship's log would not take that change. The board below shows
+            where the game truly stands - have another go.
+          </>
+        }
+        defaultButtonContent={"OK"}
+        onAccept={() => setShowChangeFailedPopup(false)}
+        onCancel={() => setShowChangeFailedPopup(false)}
+        show={showChangeFailedPopup}
         centered={false}
         fullScreen={false}
         backdrop={showTutorial ? false : true}
@@ -812,6 +853,7 @@ const App = () => {
               moveToNextGameStatus={moveToNextGameStatus}
               moveToPreviousGameStatus={moveToPreviousGameStatus}
               gameChanging={gameChanging}
+              onChangeFailed={reportChangeFailed}
               getCurrentHash={() => getCurrentHash(game.id)}
               showRestartButtons={showRestartButtons}
               onRestartGame={restartGame}
