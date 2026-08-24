@@ -48,7 +48,7 @@ public record Game
     if (Status != GameStatus.AcceptingPlayers)
       throw new ArgumentException($"Cannot add player at this time.");
 
-    var playerRounds = PlayerRounds.Create(player);
+    var playerRounds = PlayerRounds.Create(player, EditablePlayerRoundInfo.Count);
     EditablePlayerRoundInfo.Add(playerRounds);
     return playerRounds;
   }
@@ -62,6 +62,33 @@ public record Game
       throw new ArgumentException("Cannot remove first player");
 
     EditablePlayerRoundInfo.Remove(EditablePlayerRoundInfo.Single(x => x.Player == player));
+    RenumberSeats();
+  }
+
+  // Rows come back from the database in whatever order it happens to hold them,
+  // which is not the order they were written in. Everything here depends on
+  // seating order (the captain is seat 0) and on rounds being in playing order
+  // (the current round is the last one), so restore both after loading. Returns
+  // true when the order had to be corrected, which is worth logging - a game
+  // that looks scrambled is a game that was read before this ran.
+  public bool SortPlayersAndRounds()
+  {
+    var wasOutOfOrder = !EditablePlayerRoundInfo
+      .Select(x => x.SeatNumber)
+      .SequenceEqual(EditablePlayerRoundInfo.Select(x => x.SeatNumber).Order());
+
+    EditablePlayerRoundInfo.Sort((left, right) => left.SeatNumber.CompareTo(right.SeatNumber));
+
+    foreach (var playerRoundInfo in EditablePlayerRoundInfo)
+      wasOutOfOrder |= playerRoundInfo.SortRounds();
+
+    return wasOutOfOrder;
+  }
+
+  private void RenumberSeats()
+  {
+    for (var seat = 0; seat < EditablePlayerRoundInfo.Count; seat++)
+      EditablePlayerRoundInfo[seat].SeatNumber = seat;
   }
 
   public void SetPlayerOrder(IReadOnlyList<Guid> newPlayerOrder)
@@ -195,12 +222,15 @@ public record Game
     return removedRounds;
   }
 
-  internal GameDto MapToDto()
+  internal GameDto MapToDto(string? hash = null)
   {
     return new GameDto
     {
       Id = Id,
-      Hash = GetHashCode().ToString(),
+      // Prefer the hash that was stored when the game was last written.
+      // Recomputing it here would let a read disagree with the stored value
+      // forever, and every update would then be rejected as out of date.
+      Hash = hash ?? GetHashCode().ToString(),
       Status = Status,
       PlayerRoundInfo = PlayerRoundInfo.Select(x => x.MapToDto()).ToList(),
       IsRandomBid = this.IsRandomBid,

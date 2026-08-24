@@ -1,12 +1,18 @@
 public record Round
 {
   public Round(int maxBid)
+    : this(maxBid, maxBid)
+  {
+  }
+
+  public Round(int maxBid, int number)
   {
     if (0 < maxBid && maxBid < 11)
       MaxBid = maxBid;
     else
       throw new ArgumentException("Max bid must be between 1 and 10");
 
+    Number = number;
     Id = Guid.NewGuid();
   }
 
@@ -91,6 +97,12 @@ public record Round
   }
 
   public Guid Id { get; init; } = Guid.NewGuid();
+
+  // Which round of the game this is (1-10). The rounds a player has played are
+  // only meaningful in order, and the order they come back from the database is
+  // not guaranteed, so the position is stored rather than inferred.
+  public int Number { get; private set; }
+
   public int MaxBid { get; private set; }
   public int? Bid { get; private set; }
   public int? TricksTaken { get; private set; }

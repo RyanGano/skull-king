@@ -511,7 +511,7 @@ public class GameRoutesTests : IClassFixture<TestFixture>
 
   private Game GetGame(string gameId)
   {
-    return _dbContext.Games
+    var game = _dbContext.Games
       .Include(g => g.PlayerRoundInfo)
          .ThenInclude(info => info.Player)
       .Include(g => g.PlayerRoundInfo)
@@ -519,5 +519,11 @@ public class GameRoutesTests : IClassFixture<TestFixture>
       .Where(x => x.Id == gameId)
       .AsNoTracking()
       .FirstOrDefault()!;
+
+    // The routes do the same after loading; without it the hash computed here
+    // would not match the one the service stored.
+    game?.SortPlayersAndRounds();
+
+    return game!;
   }
 }
