@@ -10,6 +10,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Spinner } from "react-bootstrap";
 import { TutorialContext } from "../../TutorialContext";
 
+// A change the service rejects as out of date is worth retrying with fresh
+// data, but not forever - an endless retry leaves the spinner up for good.
+const MAX_STALE_RETRIES = 5;
+
 interface PlayAreaProps {
   game: Game;
   me: Player;
@@ -18,6 +22,7 @@ interface PlayAreaProps {
   moveToPreviousGameStatus: (hash?: string) => Promise<void>;
   gameChanging: boolean;
   getCurrentHash: () => Promise<string | undefined>;
+  onChangeFailed?: () => void;
   showRestartButtons?: boolean;
   onRestartGame?: () => Promise<void>;
   onTutorialContextChanged?: (context: TutorialContext) => void;
@@ -32,6 +37,7 @@ export const PlayArea = (props: PlayAreaProps) => {
     moveToPreviousGameStatus,
     gameChanging,
     getCurrentHash,
+    onChangeFailed,
     showRestartButtons,
     onRestartGame,
     onTutorialContextChanged,
@@ -49,7 +55,7 @@ export const PlayArea = (props: PlayAreaProps) => {
   }, [changingGame, gameChanging]);
 
   const changeBid = useCallback(
-    async (playerId: string, bid: number, hash?: string) => {
+    async (playerId: string, bid: number, hash?: string, attempt = 0) => {
       if (!game) {
         console.log("No game");
         return;
@@ -63,22 +69,24 @@ export const PlayArea = (props: PlayAreaProps) => {
         playerToken,
       );
 
-      if (result.status !== 200) {
-        console.log("Could not set bid");
-
-        if (result.status === 409) {
-          setTimeout(async () => {
-            const hash = await getCurrentHash();
-            changeBid(playerId, bid, hash);
-          }, 1000);
-        }
-      }
-
-      if (result.status !== 409) {
+      if (result.status === 200) {
         setChangingGame(false);
+        return;
       }
+
+      console.log("Could not set bid", result.status);
+
+      if (result.status === 409 && attempt < MAX_STALE_RETRIES) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const currentHash = await getCurrentHash();
+        await changeBid(playerId, bid, currentHash, attempt + 1);
+        return;
+      }
+
+      setChangingGame(false);
+      onChangeFailed?.();
     },
-    [game, getCurrentHash, playerToken],
+    [game, getCurrentHash, onChangeFailed, playerToken],
   );
 
   const changeScore = useCallback(
@@ -87,6 +95,7 @@ export const PlayArea = (props: PlayAreaProps) => {
       tricksTaken: number,
       bonus: number,
       hash?: string,
+      attempt = 0,
     ) => {
       if (!game) {
         console.log("No game");
@@ -107,22 +116,30 @@ export const PlayArea = (props: PlayAreaProps) => {
         playerToken,
       );
 
-      if (result.status !== 200) {
-        console.log("Could not set score");
-
-        if (result.status === 409) {
-          setTimeout(async () => {
-            const hash = await getCurrentHash();
-            changeScore(playerId, tricksTaken, bonus, hash);
-          }, 1000);
-        }
-      }
-
-      if (result.status !== 409) {
+      if (result.status === 200) {
         setChangingGame(false);
+        return;
       }
+
+      console.log("Could not set score", result.status);
+
+      if (result.status === 409 && attempt < MAX_STALE_RETRIES) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const currentHash = await getCurrentHash();
+        await changeScore(
+          playerId,
+          tricksTaken,
+          bonus,
+          currentHash,
+          attempt + 1,
+        );
+        return;
+      }
+
+      setChangingGame(false);
+      onChangeFailed?.();
     },
-    [game, getCurrentHash, playerToken],
+    [game, getCurrentHash, onChangeFailed, playerToken],
   );
 
   const gameState =
