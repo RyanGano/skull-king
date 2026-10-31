@@ -9,7 +9,7 @@ on:
       - main
     paths:
       - "skull-king-service/**"
-      - "skull-king-service.tests/**"
+      - "Directory.Packages.props"
       - ".github/workflows/publish-backend.yml"
   pull_request:
     types: [opened, synchronize, reopened, closed]
@@ -17,6 +17,7 @@ on:
       - main
     paths:
       - "skull-king-service/**"
+      - "Directory.Packages.props"
       - ".github/workflows/publish-backend.yml"
   workflow_dispatch:
 
