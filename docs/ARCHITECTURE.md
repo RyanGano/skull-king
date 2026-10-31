@@ -47,6 +47,22 @@ Because state is in-memory, the App Service must stay warm or in-progress games 
 - `PlayerRounds` — one per player, owns that player's `Round` list and bid/score logic.
 - The **first player in the list is the "captain"** (game owner) — only they may start the game, remove other players, and reorder. The captain cannot leave while others remain.
 - `GameId` — short human-friendly code; normalizes look-alike characters (O→0, I→1).
+- `Player` — a public `Id` (shown to everyone in the game) and a secret `Token` (see below).
+
+### Authorizing game actions
+
+Each player gets a [player token](terms.md#player-token): 128 random bits, returned **only** to the caller that created the game (`POST /games` → `CreatedGameDto.playerToken`) or joined it (`PUT /games/{id}/players` → `JoinedPlayerDto.playerToken`). It is `[JsonIgnore]` on `Player` and is never part of `GameDto`, so reading a game never reveals it.
+
+Every action sends the acting player's token in the `X-Player-Token` header, and `GameRoutes` resolves the requester from it (`FindRequestingPlayer`, a constant-time compare). A public player `Id` in the query string only names the *target* of an action (whose bid, which player to remove), never who is asking:
+
+- captain only: start, reset, move next/previous, reorder
+- the player themselves or the captain: set bid, set score, rename, remove
+
+A missing or unknown token gets **401**. State-changing routes are `POST` (or `PUT`/`DELETE`), never `GET`; only `GET /games/{id}` and `GET /games/getid` read.
+
+### Rate limiting
+
+Per-client fixed-window limits (`src/Utility/RateLimits.cs`): reading a game 900/min, creating a game 10/min, joining/renaming 30/min. Reads are generous because a table of players often shares one network address and each polls once a second. The client is identified by `ClientIp`: the **last** `X-Forwarded-For` entry (the one App Service appends; earlier entries are client-supplied), with the port stripped. Limits can be overridden through configuration (`RateLimits:GameReadPerMinute`, `RateLimits:GameCreatePerMinute`, `RateLimits:GameJoinPerMinute`); the integration `TestFixture` raises them so tests are not throttled, and `RateLimitTests` checks them.
 
 ### Optimistic concurrency via hashing
 
@@ -63,8 +79,8 @@ DTOs in `src/Dtos/` are the wire format (`MapToDto()`); domain objects are not s
 - **Polling, not websockets:** once in a game, `startUpdateTimer` polls `GET /games/{id}` every 1 second, sending `knownHash` so most polls return 304. The current hash is tracked in `currentHashRef`. Polling is resilient to transient backend outages: network errors are ignored, and the game is only declared lost after several consecutive 404s; the deep-link rejoin also retries before giving up.
 - While a game is underway the app holds a screen wake lock (`src/utils/use-wake-lock.ts`) so phones keep polling, and a `visibilitychange` handler refreshes immediately when the app returns to the foreground.
 - All HTTP goes through the thin `axios` wrappers in `src/utils/api-utils.ts` (`callGetRoute`/`callPostRoute`/`callPutRoute`/`callDeleteRoute`), which normalize success/error into `{ data, status, statusText }`.
-- Routing: URL is `/{gameId}/{playerId}`; on load `App` validates the player is in the game and joins the poll, else redirects home.
-- Game identity (which player "me" is) lives in state/URL; `cookie-utils.ts` is only used to remember whether the tutorial prompt has been shown.
+- Routing: URL is `/{gameId}/{playerId}`; on load `App` validates the player is in the game **and** that this browser holds that player's token, then joins the poll. Otherwise it shows a message and returns home (a seat joined on another device stays with that device).
+- Game identity: which player "me" is lives in state/URL; the player's secret token lives in `localStorage` (`src/utils/player-token.ts`, keyed by game and player id) and in `myToken` state, and `api-utils.ts` sends it as `X-Player-Token`. It never goes in the URL. `cookie-utils.ts` is only used to remember whether the tutorial prompt has been shown.
 - Tutorial system (`Tutorial.tsx`, `TutorialContext.tsx`) drives context-sensitive help based on `game.status`.
 
 ## Deployment
@@ -72,6 +88,6 @@ DTOs in `src/Dtos/` are the wire format (`MapToDto()`); domain objects are not s
 Both halves deploy from `main` via GitHub Actions, each gated on its own path filter:
 
 - `.github/workflows/publish-frontend.yml` — `yarn install && yarn build`, then Azure Static Web Apps deploy. Also handles PR preview/close.
-- `.github/workflows/publish-backend.yml` — `dotnet build` + run both test projects + `dotnet publish`, then Azure App Service deploy (`skull-king-api`). Azure credentials are GitHub secrets.
+- `.github/workflows/publish-backend.yml` — `dotnet build` + run both test projects + `dotnet publish`, then Azure App Service deploy (`skull-king-api`). Azure credentials are GitHub secrets. Pull requests build and test only; the deploy job runs for `main` alone (and never for Dependabot, which gets no secrets).
 
 Because the workflows are path-filtered, a change touching only one half only runs/deploys that half.

@@ -103,7 +103,7 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     var lookupGameId = secondResponseGame?.Id;
 
     Assert.Equal(gameId, lookupGameId);
-    Assert.Equivalent(createdGame, secondResponseGame);
+    Assert.Equivalent(ToGameDto(createdGame!), secondResponseGame);
   }
 
   [Fact]
@@ -186,10 +186,9 @@ public class GameRoutesTests : IClassFixture<TestFixture>
       var playerOrderContent = JsonContent.Create(new PlayerOrderDto
       {
         PlayerOrder = newOrder.ToList(),
-        PlayerId = game.PlayerRoundInfo[0].Player!.Id,
         KnownHash = game.GetHashCode().ToString(),
       });
-      var response = await _client.PutAsync($"/games/{gameId}/players/reorder", playerOrderContent);
+      var response = await SendAs(HttpMethod.Put, game.PlayerRoundInfo[0].Player!.Token, $"/games/{gameId}/players/reorder", playerOrderContent);
 
       response.EnsureSuccessStatusCode();
       Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -210,10 +209,9 @@ public class GameRoutesTests : IClassFixture<TestFixture>
       var playerOrderContent = JsonContent.Create(new PlayerOrderDto
       {
         PlayerOrder = newOrder2.ToList(),
-        PlayerId = game.PlayerRoundInfo[0].Player!.Id,
         KnownHash = game.GetHashCode().ToString(),
       });
-      var response = await _client.PutAsync($"/games/{gameId}/players/reorder", playerOrderContent);
+      var response = await SendAs(HttpMethod.Put, game.PlayerRoundInfo[0].Player!.Token, $"/games/{gameId}/players/reorder", playerOrderContent);
 
       response.EnsureSuccessStatusCode();
       Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -237,17 +235,17 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
     var responseContent = await response.Content.ReadAsStringAsync();
-    var responsePlayer = JsonSerializer.Deserialize<PlayerDto>(responseContent, _JsonSerializerOptions);
+    var joinedPlayer = JsonSerializer.Deserialize<JoinedPlayerDto>(responseContent, _JsonSerializerOptions);
 
-    var playerId = responsePlayer?.Id;
-    playerContent = JsonContent.Create(responsePlayer! with { Name = "Updated Name" });
-    response = await _client.PutAsync($"/games/{gameId}/players", playerContent);
+    var playerId = joinedPlayer?.Id;
+    playerContent = JsonContent.Create(new PlayerDto { Id = joinedPlayer!.Id, Name = "Updated Name" });
+    response = await SendAs(HttpMethod.Put, joinedPlayer.PlayerToken, $"/games/{gameId}/players", playerContent);
 
     response.EnsureSuccessStatusCode();
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
     responseContent = await response.Content.ReadAsStringAsync();
-    responsePlayer = JsonSerializer.Deserialize<PlayerDto>(responseContent, _JsonSerializerOptions);
+    var responsePlayer = JsonSerializer.Deserialize<PlayerDto>(responseContent, _JsonSerializerOptions);
 
     Assert.Equal("Updated Name", responsePlayer?.Name);
     Assert.Equal(playerId, responsePlayer?.Id);
@@ -290,7 +288,7 @@ public class GameRoutesTests : IClassFixture<TestFixture>
 
     var game = GetGame(gameId!);
 
-    var response = await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[playerIndex].Player!.Id}&knownHash={game.GetHashCode()}");
+    var response = await PostAs(game.PlayerRoundInfo[playerIndex].Player!.Token, $"/games/{gameId}/start?knownHash={game.GetHashCode()}");
     if (canStart)
     {
       Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -320,7 +318,7 @@ public class GameRoutesTests : IClassFixture<TestFixture>
 
     var game = GetGame(gameId!);
 
-    var response = await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&randomBidMode={useRandomBidMode}&gameDifficulty={gameDifficulty}&knownHash={game.GetHashCode()}");
+    var response = await PostAs(game.PlayerRoundInfo[0].Player!.Token, $"/games/{gameId}/start?randomBidMode={useRandomBidMode}&gameDifficulty={gameDifficulty}&knownHash={game.GetHashCode()}");
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     game = GetGame(gameId!);
     Assert.Equal(useRandomBidMode, game.IsRandomBid);
@@ -330,7 +328,7 @@ public class GameRoutesTests : IClassFixture<TestFixture>
 
     if (useRandomBidMode)
     {
-      response = await _client.GetAsync($"/games/{gameId}/movenext?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+      response = await PostAs(game.PlayerRoundInfo[0].Player!.Token, $"/games/{gameId}/movenext?knownHash={game.GetHashCode()}");
       Assert.Equal(HttpStatusCode.OK, response.StatusCode);
       game = GetGame(gameId!);
       Assert.Equal(GameStatus.BiddingClosed, game.Status);
@@ -349,7 +347,7 @@ public class GameRoutesTests : IClassFixture<TestFixture>
 
     var game = GetGame(gameId!);
 
-    var response = await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={gameId!.GetHashCode() + 1}");
+    var response = await PostAs(game.PlayerRoundInfo[0].Player!.Token, $"/games/{gameId}/start?knownHash={gameId!.GetHashCode() + 1}");
 
     Assert.Equal(HttpStatusCode.PreconditionFailed, response.StatusCode);
   }
@@ -365,10 +363,10 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     await _client.PutAsync($"/games/{gameId}/players", playerContent);
     var game = GetGame(gameId!);
 
-    await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    await PostAs(game.PlayerRoundInfo[0].Player!.Token, $"/games/{gameId}/start?knownHash={game.GetHashCode()}");
     game = GetGame(gameId!);
 
-    var response = await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    var response = await PostAs(game.PlayerRoundInfo[0].Player!.Token, $"/games/{gameId}/start?knownHash={game.GetHashCode()}");
     Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
   }
 
@@ -383,10 +381,10 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     await _client.PutAsync($"/games/{gameId}/players", playerContent);
     var game = GetGame(gameId!);
 
-    await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    await PostAs(game.PlayerRoundInfo[0].Player!.Token, $"/games/{gameId}/start?knownHash={game.GetHashCode()}");
     game = GetGame(gameId!);
 
-    var response = await _client.GetAsync($"/games/{gameId}/movenext?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    var response = await PostAs(game.PlayerRoundInfo[0].Player!.Token, $"/games/{gameId}/movenext?knownHash={game.GetHashCode()}");
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
     game = GetGame(gameId!);
@@ -405,7 +403,7 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     await _client.PutAsync($"/games/{gameId}/players", playerContent);
     var game = GetGame(gameId!);
 
-    await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    await PostAs(game.PlayerRoundInfo[0].Player!.Token, $"/games/{gameId}/start?knownHash={game.GetHashCode()}");
     game = GetGame(gameId!);
 
     // Set bids and update hash
@@ -418,10 +416,10 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     _dbContext.SaveChanges();
     var currentHash = game.GetHashCode();
 
-    await _client.GetAsync($"/games/{gameId}/movenext?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    await PostAs(game.PlayerRoundInfo[0].Player!.Token, $"/games/{gameId}/movenext?knownHash={game.GetHashCode()}");
     game = GetGame(gameId!);
 
-    var response = await _client.GetAsync($"/games/{gameId}/moveprevious?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    var response = await PostAs(game.PlayerRoundInfo[0].Player!.Token, $"/games/{gameId}/moveprevious?knownHash={game.GetHashCode()}");
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
     game = GetGame(gameId!);
@@ -440,10 +438,10 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     await _client.PutAsync($"/games/{gameId}/players", playerContent);
     var game = GetGame(gameId!);
 
-    await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    await PostAs(game.PlayerRoundInfo[0].Player!.Token, $"/games/{gameId}/start?knownHash={game.GetHashCode()}");
     game = GetGame(gameId!);
 
-    var response = await _client.GetAsync($"/games/{gameId}/setbid?playerId={game.PlayerRoundInfo[1].Player!.Id}&bid=1&knownHash={game.GetHashCode()}");
+    var response = await PostAs(game.PlayerRoundInfo[1].Player!.Token, $"/games/{gameId}/setbid?playerId={game.PlayerRoundInfo[1].Player!.Id}&bid=1&knownHash={game.GetHashCode()}");
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
     var updatedGame = GetGame(game.Id);
@@ -462,12 +460,12 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     await _client.PutAsync($"/games/{gameId}/players", playerContent);
     var game = GetGame(gameId!);
 
-    await _client.GetAsync($"/games/{gameId}/start?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    await PostAs(game.PlayerRoundInfo[0].Player!.Token, $"/games/{gameId}/start?knownHash={game.GetHashCode()}");
     game = GetGame(gameId!);
-    await _client.GetAsync($"/games/{gameId}/movenext?playerId={game.PlayerRoundInfo[0].Player!.Id}&knownHash={game.GetHashCode()}");
+    await PostAs(game.PlayerRoundInfo[0].Player!.Token, $"/games/{gameId}/movenext?knownHash={game.GetHashCode()}");
     game = GetGame(gameId!);
 
-    var response = await _client.GetAsync($"/games/{gameId}/setscore?playerId={game.PlayerRoundInfo[1].Player!.Id}&trickstaken=1&bonus=0&knownHash={game.GetHashCode()}");
+    var response = await PostAs(game.PlayerRoundInfo[1].Player!.Token, $"/games/{gameId}/setscore?playerId={game.PlayerRoundInfo[1].Player!.Id}&trickstaken=1&bonus=0&knownHash={game.GetHashCode()}");
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
     var updatedGame = GetGame(game.Id);
@@ -490,16 +488,43 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
   }
 
-  private async Task<GameDto?> CreateNewGame(string playerName)
+  private async Task<CreatedGameDto?> CreateNewGame(string playerName)
   {
     var newGameDto = new NewGameDto { PlayerName = playerName };
     var content = JsonContent.Create(newGameDto);
     var response = await _client.PostAsync("/games", content);
 
     var responseContent = await response.Content.ReadAsStringAsync();
-    var responseGame = JsonSerializer.Deserialize<GameDto>(responseContent, _JsonSerializerOptions);
+    var responseGame = JsonSerializer.Deserialize<CreatedGameDto>(responseContent, _JsonSerializerOptions);
 
     return responseGame;
+  }
+
+  private Task<HttpResponseMessage> PostAs(string? playerToken, string uri)
+  {
+    return SendAs(HttpMethod.Post, playerToken, uri);
+  }
+
+  private Task<HttpResponseMessage> SendAs(HttpMethod method, string? playerToken, string uri, HttpContent? content = null)
+  {
+    var request = new HttpRequestMessage(method, uri) { Content = content };
+    if (playerToken is not null)
+      request.Headers.Add(GameRoutes.PlayerTokenHeader, playerToken);
+
+    return _client.SendAsync(request);
+  }
+
+  private static GameDto ToGameDto(CreatedGameDto created)
+  {
+    return new GameDto
+    {
+      Id = created.Id,
+      Hash = created.Hash,
+      Status = created.Status,
+      PlayerRoundInfo = created.PlayerRoundInfo,
+      IsRandomBid = created.IsRandomBid,
+      ExpansionEnabled = created.ExpansionEnabled,
+    };
   }
 
   private void AddGame(Game game)
@@ -511,7 +536,7 @@ public class GameRoutesTests : IClassFixture<TestFixture>
 
   private Game GetGame(string gameId)
   {
-    return _dbContext.Games
+    var game = _dbContext.Games
       .Include(g => g.PlayerRoundInfo)
          .ThenInclude(info => info.Player)
       .Include(g => g.PlayerRoundInfo)
@@ -519,5 +544,11 @@ public class GameRoutesTests : IClassFixture<TestFixture>
       .Where(x => x.Id == gameId)
       .AsNoTracking()
       .FirstOrDefault()!;
+
+    // The routes do the same after loading; without it the hash computed here
+    // would not match the one the service stored.
+    game?.SortPlayersAndRounds();
+
+    return game!;
   }
 }

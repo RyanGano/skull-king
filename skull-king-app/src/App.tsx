@@ -18,6 +18,11 @@ import {
 import { getCookie, setCookie } from "./utils/cookie-utils";
 import { useWakeLock } from "./utils/use-wake-lock";
 import {
+  forgetPlayerToken,
+  loadPlayerToken,
+  savePlayerToken,
+} from "./utils/player-token";
+import {
   AddPlayerUri,
   CreateNewGameUri,
   EditPlayerUri,
@@ -50,7 +55,13 @@ import { TutorialContext } from "./TutorialContext";
 // so a transient blip (e.g. the backend restarting) doesn't end the session
 const MAX_CONSECUTIVE_404S = 5;
 
-type GameLostReason = "gameGone" | "playerRemoved";
+// How many times to re-read the game and retry a change that the service
+// rejected as out of date. Retrying forever leaves the spinner up with no way
+// out, so give up and tell the crew instead.
+const MAX_STALE_RETRIES = 5;
+
+// "otherDevice": the link names a player whose token is not on this device
+type GameLostReason = "gameGone" | "playerRemoved" | "otherDevice";
 
 const App = () => {
   const navigate = useNavigate();
@@ -60,12 +71,15 @@ const App = () => {
   }>();
   const [game, setGame] = useState<Game | null>(null);
   const [me, setMe] = useState<Player>();
+  // My secret player token; sent with every game action, never displayed
+  const [myToken, setMyToken] = useState<string>();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentHashRef = useRef<string | undefined>(undefined);
   const consecutive404sRef = useRef(0);
   const [showExitPopup, setShowExitPopup] = useState(false);
   const [showCaptainCannotLeavePopup, setShowCaptainCannotLeavePopup] =
     useState(false);
+  const [showChangeFailedPopup, setShowChangeFailedPopup] = useState(false);
   const [gameChanging, setChangingGame] = useState(false);
   const [hasWarmedUp, setHasWarmedUp] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
@@ -249,6 +263,7 @@ const App = () => {
     (reason: GameLostReason) => {
       setGame(null);
       setMe(undefined);
+      setMyToken(undefined);
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -380,10 +395,19 @@ const App = () => {
               (pri) => pri.player?.id === urlPlayerId,
             )?.player;
 
-            if (player) {
+            const token = player
+              ? loadPlayerToken(gameData.id, player.id)
+              : undefined;
+
+            if (player && token) {
               setGame(gameData);
               setMe(player);
+              setMyToken(token);
               startUpdateTimer(urlGameId, gameData.hash);
+            } else if (player) {
+              // This seat was taken on another device (or this browser's
+              // storage was cleared), so this device cannot act for it
+              endGameSession("otherDevice");
             } else {
               // Player not found in game
               endGameSession("playerRemoved");
@@ -432,10 +456,14 @@ const App = () => {
       if (result.status !== 201) {
         console.log("Error creating game", result.status, result.statusText);
       } else {
-        const gameData = result.data as Game;
+        const { playerToken, ...gameData } = result.data as Game & {
+          playerToken: string;
+        };
         const player = gameData.playerRoundInfo[0].player;
+        savePlayerToken(gameData.id, player.id, playerToken);
         setGame(gameData);
         setMe(player);
+        setMyToken(playerToken);
         setSetupOpen(false);
         startUpdateTimer(gameData.id, gameData.hash);
         // Navigate to the game URL with player ID
@@ -463,13 +491,17 @@ const App = () => {
       if (result.status !== 200) {
         console.log("Error joining game", result.status, result.statusText);
       } else {
-        const player = result.data;
+        const { playerToken, ...player } = result.data as Player & {
+          playerToken: string;
+        };
         // Load the updated game
         const gameResult = await callGetRoute(GetGameUri(gameId));
         if (gameResult.status === 200) {
           const gameData = gameResult.data as Game;
+          savePlayerToken(gameData.id, player.id, playerToken);
           setGame(gameData);
           setMe(player);
+          setMyToken(playerToken);
           setSetupOpen(false);
           // Start polling for updates
           startUpdateTimer(gameId, gameData.hash);
@@ -493,7 +525,8 @@ const App = () => {
 
       const result = await callPutRoute(
         EditPlayerUri(game.id),
-        JSON.parse(JSON.stringify({ ...player, name: newName })),
+        JSON.parse(JSON.stringify({ id: player.id, name: newName })),
+        myToken,
       );
 
       if (result.status !== 200) {
@@ -502,7 +535,7 @@ const App = () => {
         updateGame(game.id, currentHashRef.current ?? "");
       }
     },
-    [game?.id, updateGame],
+    [game?.id, myToken, updateGame],
   );
 
   const addPlayerAsOwner = useCallback(
@@ -532,7 +565,8 @@ const App = () => {
       }
 
       const result = await callDeleteRoute(
-        RemovePlayerUri(game.id, playerId, me.id, currentHashRef.current ?? ""),
+        RemovePlayerUri(game.id, playerId, currentHashRef.current ?? ""),
+        myToken,
       );
 
       if (result.status !== 200 && result.status !== 404) {
@@ -541,7 +575,7 @@ const App = () => {
         updateGame(game.id, currentHashRef.current ?? "");
       }
     },
-    [game?.id, me?.id, updateGame],
+    [game?.id, me?.id, myToken, updateGame],
   );
 
   const reorderPlayers = useCallback(
@@ -558,10 +592,10 @@ const App = () => {
         JSON.parse(
           JSON.stringify({
             playerOrder: playerOrder,
-            playerId: me.id,
             knownHash: currentHashRef.current ?? "",
           }),
         ),
+        myToken,
       );
 
       if (result.status !== 200) {
@@ -570,7 +604,7 @@ const App = () => {
         updateGame(game.id, currentHashRef.current ?? "");
       }
     },
-    [game?.id, me?.id, updateGame],
+    [game?.id, me?.id, myToken, updateGame],
   );
 
   const handleTutorialContextChanged = useCallback(
@@ -591,8 +625,10 @@ const App = () => {
         return;
       }
 
-      const result = await callGetRoute(
-        StartGameUri(game.id, me.id, game.hash, randomBids, gameDifficulty),
+      const result = await callPostRoute(
+        StartGameUri(game.id, game.hash, randomBids, gameDifficulty),
+        undefined,
+        myToken,
       );
 
       if (result.status !== 200) {
@@ -601,7 +637,7 @@ const App = () => {
         updateGame(game.id, currentHashRef.current ?? "");
       }
     },
-    [game?.hash, game?.id, game?.playerRoundInfo, me?.id, updateGame],
+    [game?.hash, game?.id, game?.playerRoundInfo, me?.id, myToken, updateGame],
   );
 
   const restartGame = useCallback(async () => {
@@ -610,8 +646,10 @@ const App = () => {
       return;
     }
 
-    const result = await callGetRoute(
-      GameResetUri(game.id, me.id, currentHashRef.current ?? ""),
+    const result = await callPostRoute(
+      GameResetUri(game.id, currentHashRef.current ?? ""),
+      undefined,
+      myToken,
     );
 
     if (result.status !== 200) {
@@ -625,10 +663,15 @@ const App = () => {
 
     // Update the game with the reset state
     updateGame(game.id, currentHashRef.current ?? "");
-  }, [game, me, updateGame]);
+  }, [game, me, myToken, updateGame]);
+
+  const reportChangeFailed = useCallback(
+    () => setShowChangeFailedPopup(true),
+    [],
+  );
 
   const moveToPreviousGameStatus = useCallback(
-    async (hash?: string) => {
+    async (hash?: string, attempt = 0) => {
       if (!game || !me) {
         console.log("No game or player");
         return;
@@ -636,27 +679,38 @@ const App = () => {
 
       setChangingGame(true);
       // Attempt to update the game status
-      const result = await callGetRoute(
-        GameMovePreviousPhaseUri(game.id, me.id, hash ?? game.hash),
+      const result = await callPostRoute(
+        GameMovePreviousPhaseUri(game.id, hash ?? game.hash),
+        undefined,
+        myToken,
       );
 
-      if (result.status !== 200) {
-        console.log("Could not move to previous phase");
-        if (result.status === 409) {
-          console.log("Updating data and trying again");
-          const hash = await getCurrentHash(game.id);
-          moveToPreviousGameStatus(hash);
-        }
-      } else {
+      if (result.status === 200) {
         await updateGame(game.id, currentHashRef.current ?? "");
         setChangingGame(false);
+        return;
       }
+
+      console.log("Could not move to previous phase", result.status);
+
+      if (result.status === 409 && attempt < MAX_STALE_RETRIES) {
+        console.log("Updating data and trying again");
+        const currentHash = await getCurrentHash(game.id);
+        await moveToPreviousGameStatus(currentHash, attempt + 1);
+        return;
+      }
+
+      // Nothing more to try - make sure the crew sees the game again rather
+      // than a spinner that never goes away
+      await updateGame(game.id, "");
+      setChangingGame(false);
+      reportChangeFailed();
     },
-    [game, getCurrentHash, me, updateGame],
+    [game, getCurrentHash, me, myToken, reportChangeFailed, updateGame],
   );
 
   const moveToNextGameStatus = useCallback(
-    async (hash?: string) => {
+    async (hash?: string, attempt = 0) => {
       if (!game || !me) {
         console.log("No game or player");
         return;
@@ -664,42 +718,55 @@ const App = () => {
 
       setChangingGame(true);
       // Attempt to update the game status
-      const result = await callGetRoute(
-        GameMoveNextPhaseUri(game.id, me.id, hash ?? game.hash),
+      const result = await callPostRoute(
+        GameMoveNextPhaseUri(game.id, hash ?? game.hash),
+        undefined,
+        myToken,
       );
 
-      if (result.status !== 200) {
-        console.log("Could not move to next phase");
-        if (result.status === 409) {
-          console.log("Updating data and trying again");
-          setTimeout(async () => {
-            const hash = await getCurrentHash(game.id);
-            moveToNextGameStatus(hash);
-          }, 500);
-        }
-      } else {
-        updateGame(game.id, currentHashRef.current ?? "");
+      if (result.status === 200) {
+        await updateGame(game.id, currentHashRef.current ?? "");
         setChangingGame(false);
+        return;
       }
+
+      console.log("Could not move to next phase", result.status);
+
+      if (result.status === 409 && attempt < MAX_STALE_RETRIES) {
+        console.log("Updating data and trying again");
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const currentHash = await getCurrentHash(game.id);
+        await moveToNextGameStatus(currentHash, attempt + 1);
+        return;
+      }
+
+      // Nothing more to try - make sure the crew sees the game again rather
+      // than a spinner that never goes away
+      await updateGame(game.id, "");
+      setChangingGame(false);
+      reportChangeFailed();
     },
-    [game, getCurrentHash, me, updateGame],
+    [game, getCurrentHash, me, myToken, reportChangeFailed, updateGame],
   );
 
   const exitGame = useCallback(async () => {
     if (game && me) {
       // Call the backend to remove the player
       const result = await callDeleteRoute(
-        RemovePlayerUri(game.id, me.id, me.id, currentHashRef.current ?? ""),
+        RemovePlayerUri(game.id, me.id, currentHashRef.current ?? ""),
+        myToken,
       );
       if (result.status === 200 || result.status === 404) {
         // Successfully removed or game/player not found
       } else {
         console.log("Error leaving game", result.status, result.statusText);
       }
+      forgetPlayerToken(game.id, me.id);
     }
     // Clear the game state and navigate to home
     setGame(null);
     setMe(undefined);
+    setMyToken(undefined);
     clearInterval(timerRef.current!);
     timerRef.current = null;
     currentHashRef.current = undefined;
@@ -707,7 +774,7 @@ const App = () => {
     setGameEndedAt(null);
     setShowRestartButtons(false);
     navigate("/");
-  }, [game, me, navigate]);
+  }, [game, me, myToken, navigate]);
 
   // Update footer height CSS variable for dynamic share button positioning
   useLayoutEffect(() => {
@@ -742,6 +809,22 @@ const App = () => {
         onAccept={exitGame}
         onCancel={() => setShowExitPopup(false)}
         show={showExitPopup}
+        centered={false}
+        fullScreen={false}
+        backdrop={showTutorial ? false : true}
+      />
+      <SimpleModal
+        title={"The Change Was Not Recorded"}
+        content={
+          <>
+            The ship's log would not take that change. The board below shows
+            where the game truly stands - have another go.
+          </>
+        }
+        defaultButtonContent={"OK"}
+        onAccept={() => setShowChangeFailedPopup(false)}
+        onCancel={() => setShowChangeFailedPopup(false)}
+        show={showChangeFailedPopup}
         centered={false}
         fullScreen={false}
         backdrop={showTutorial ? false : true}
@@ -809,9 +892,11 @@ const App = () => {
             <PlayArea
               game={game}
               me={me!}
+              playerToken={myToken}
               moveToNextGameStatus={moveToNextGameStatus}
               moveToPreviousGameStatus={moveToPreviousGameStatus}
               gameChanging={gameChanging}
+              onChangeFailed={reportChangeFailed}
               getCurrentHash={() => getCurrentHash(game.id)}
               showRestartButtons={showRestartButtons}
               onRestartGame={restartGame}
@@ -882,7 +967,9 @@ const App = () => {
         title={
           gameLostReason === "playerRemoved"
             ? "Ye Walked the Plank!"
-            : "Arrr! The Game Be Lost at Sea!"
+            : gameLostReason === "otherDevice"
+              ? "Ye Can't Board From Here!"
+              : "Arrr! The Game Be Lost at Sea!"
         }
         content={
           <>
@@ -895,7 +982,9 @@ const App = () => {
             >
               {gameLostReason === "playerRemoved"
                 ? "Ye be no longer part of this crew, ye scurvy dog!"
-                : "This game can no longer be found, ye scurvy dogs!"}
+                : gameLostReason === "otherDevice"
+                  ? "That place in the crew was claimed on another device."
+                  : "This game can no longer be found, ye scurvy dogs!"}
             </p>
             <p
               style={{
@@ -907,7 +996,9 @@ const App = () => {
             >
               {gameLostReason === "playerRemoved"
                 ? "Find a new crew to sail with!"
-                : "The crew may have disbanded, or the ship went down. Find a new crew to sail with!"}
+                : gameLostReason === "otherDevice"
+                  ? "Open the game on the device ye joined with, or join the crew anew."
+                  : "The crew may have disbanded, or the ship went down. Find a new crew to sail with!"}
             </p>
           </>
         }

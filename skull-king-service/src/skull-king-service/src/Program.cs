@@ -8,9 +8,11 @@ builder.Services.AddDbContext<SkullKingDbContext>(options =>
   options.UseInMemoryDatabase("SkullKingInMemoryDb"));
 
 SetupCors(AllowSkullKingApp, builder);
+builder.Services.AddGameRateLimits();
 
 var app = builder.Build();
 app.UseCors(AllowSkullKingApp);
+app.UseRateLimiter();
 
 GameRoutes.Register(app, AllowSkullKingApp);
 

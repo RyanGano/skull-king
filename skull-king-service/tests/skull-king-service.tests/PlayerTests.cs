@@ -41,4 +41,38 @@ public class PlayerTests
 
     Assert.NotEqual(playerOne.GetHashCode(), playerTwo.GetHashCode());
   }
+
+  [Fact]
+  public void EachPlayerHasTheirOwnToken()
+  {
+    var playerOne = new Player("Ryan");
+    var playerTwo = new Player("Bob");
+
+    Assert.Matches("^[0-9A-F]{32}$", playerOne.Token);
+    Assert.NotEqual(playerOne.Token, playerTwo.Token);
+  }
+
+  [Fact]
+  public void HasTokenMatchesOnlyThePlayersOwnToken()
+  {
+    var playerOne = new Player("Ryan");
+    var playerTwo = new Player("Bob");
+
+    Assert.True(playerOne.HasToken(playerOne.Token));
+    Assert.False(playerOne.HasToken(playerTwo.Token));
+    Assert.False(playerOne.HasToken(playerOne.Id.ToString()));
+    Assert.False(playerOne.HasToken(""));
+    Assert.False(playerOne.HasToken(null));
+  }
+
+  [Fact]
+  public void TokenIsNotSerialized()
+  {
+    var player = new Player("Ryan");
+
+    var json = System.Text.Json.JsonSerializer.Serialize(player);
+
+    Assert.DoesNotContain(player.Token, json);
+    Assert.DoesNotContain("Token", json);
+  }
 }

@@ -1,7 +1,13 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 public static class GameRoutes
 {
+  // Game actions are authorized by the acting player's secret token, sent in
+  // this header. A player's public Id (visible to anyone who can read the
+  // game) is never enough on its own.
+  public const string PlayerTokenHeader = "X-Player-Token";
+
   public static void Register(WebApplication app, string cors)
   {
     app.MapPost("/games", async (NewGameDto gameInfo, HttpContext httpContext, SkullKingDbContext db) =>
@@ -31,25 +37,24 @@ public static class GameRoutes
       db.Rounds.AddRange(game.PlayerRoundInfo.SelectMany(x => x.Rounds!));
       db.PlayerRoundInfos.Add(game.PlayerRoundInfo.Single());
       db.Games.Add(game);
-      await UpdateHashAndSaveAsync(db, game);
+      var newGameHash = await UpdateHashAndSaveAsync(db, game);
       await db.SaveChangesAsync();
 
       httpContext.Response.StatusCode = 201;
-      await httpContext.Response.WriteAsJsonAsync(game.MapToDto());
+      var captain = game.PlayerRoundInfo.Single().Player!;
+      await httpContext.Response.WriteAsJsonAsync(new CreatedGameDto(game.MapToDto(newGameHash), captain.Token));
     })
     .WithName("CreateGame")
+    .RequireRateLimiting(RateLimits.GameCreate)
     .RequireCors(cors);
 
     app.MapGet("/games/{id}", async (GameId id, HttpContext httpContext, SkullKingDbContext db, string? knownHash = null) =>
     {
-      if (knownHash is not null)
+      var storedHash = db.Hashes.Find(id.Value);
+      if (knownHash is not null && storedHash?.Value == knownHash)
       {
-        var currentHash = db.Hashes.Find(id.Value);
-        if (currentHash?.Value == knownHash)
-        {
-          httpContext.Response.StatusCode = StatusCodes.Status304NotModified;
-          return;
-        }
+        httpContext.Response.StatusCode = StatusCodes.Status304NotModified;
+        return;
       }
 
       var game = await GetFullGame(id, db);
@@ -59,12 +64,13 @@ public static class GameRoutes
         return;
       }
 
-      await httpContext.Response.WriteAsJsonAsync(game.MapToDto());
+      await httpContext.Response.WriteAsJsonAsync(game.MapToDto(storedHash?.Value));
     })
     .WithName("GetGame")
+    .RequireRateLimiting(RateLimits.GameRead)
     .RequireCors(cors);
 
-    app.MapPut("/games/{id}/players", async (GameId id, PlayerDto player, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapPut("/games/{id}/players", async (GameId id, PlayerDto player, [FromHeader(Name = PlayerTokenHeader)] string? playerToken, HttpContext httpContext, SkullKingDbContext db) =>
     {
       var game = await GetFullGame(id, db);
       if (game is null)
@@ -75,24 +81,40 @@ public static class GameRoutes
 
       try
       {
-        if (db.Players.Find(player.Id) is { } playerModel)
+        var existingPlayer = game.PlayerRoundInfo
+          .Select(x => x.Player!)
+          .FirstOrDefault(x => x.Id == player.Id);
+
+        if (existingPlayer is not null)
         {
-          playerModel.ChangeName(player.Name!);
-          db.Players.Update(playerModel);
+          // Renaming: only the player themselves or the captain
+          var requestingPlayer = FindRequestingPlayer(game, playerToken);
+          if (requestingPlayer is null || (requestingPlayer.Id != existingPlayer.Id && !IsCaptain(game, requestingPlayer)))
+          {
+            httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return;
+          }
+
+          existingPlayer.ChangeName(player.Name!);
+          db.Players.Update(existingPlayer);
+          db.Games.Update(game);
+          await UpdateHashAndSaveAsync(db, game);
+
+          await httpContext.Response.WriteAsJsonAsync(existingPlayer.MapToDto());
+          return;
         }
-        else
-        {
-          playerModel = new Player(player.Name!);
-          var newPlayerRounds = game.AddPlayer(playerModel);
-          db.Players.Add(newPlayerRounds.Player!);
-          db.Rounds.AddRange(newPlayerRounds.Rounds);
-          db.PlayerRoundInfos.Add(newPlayerRounds);
-        }
+
+        // Joining: the new player's token is returned to this caller only
+        var newPlayer = new Player(player.Name!);
+        var newPlayerRounds = game.AddPlayer(newPlayer);
+        db.Players.Add(newPlayerRounds.Player!);
+        db.Rounds.AddRange(newPlayerRounds.Rounds);
+        db.PlayerRoundInfos.Add(newPlayerRounds);
 
         db.Games.Update(game);
         await UpdateHashAndSaveAsync(db, game);
 
-        await httpContext.Response.WriteAsJsonAsync(playerModel.MapToDto());
+        await httpContext.Response.WriteAsJsonAsync(new JoinedPlayerDto(newPlayer.MapToDto(), newPlayer.Token));
       }
       catch (ArgumentException)
       {
@@ -100,9 +122,10 @@ public static class GameRoutes
       }
     })
     .WithName("AddPlayerToGame")
+    .RequireRateLimiting(RateLimits.GameJoin)
     .RequireCors(cors);
 
-    app.MapDelete("/games/{id}/players/{playerId}", async (GameId id, Guid playerId, string knownHash, Guid requestingPlayerId, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapDelete("/games/{id}/players/{playerId}", async (GameId id, Guid playerId, string knownHash, [FromHeader(Name = PlayerTokenHeader)] string? playerToken, HttpContext httpContext, SkullKingDbContext db) =>
     {
       // Check the knownHash compared to current stored hash
       // Do not allow updates if the user's hash doesn't match the current hash
@@ -120,9 +143,9 @@ public static class GameRoutes
         return;
       }
 
-      // Allow only the player removing themselves, or the game owner removing another player
-      var ownerId = game.PlayerRoundInfo.First().Player!.Id;
-      if (requestingPlayerId != playerId && requestingPlayerId != ownerId)
+      // Allow only the player removing themselves, or the captain removing another player
+      var requestingPlayer = FindRequestingPlayer(game, playerToken);
+      if (requestingPlayer is null || (requestingPlayer.Id != playerId && !IsCaptain(game, requestingPlayer)))
       {
         httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
         return;
@@ -180,7 +203,7 @@ public static class GameRoutes
     .WithName("RemovePlayerFromGame")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}/start", async (GameId id, Guid playerId, string knownHash, bool? randomBidMode, GameDifficulty? gameDifficulty, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapPost("/games/{id}/start", async (GameId id, string knownHash, [FromHeader(Name = PlayerTokenHeader)] string? playerToken, bool? randomBidMode, GameDifficulty? gameDifficulty, HttpContext httpContext, SkullKingDbContext db) =>
     {
       // Check the knownHash compared to current stored hash
       // Do not allow updates if the user's hash doesn't match the current hash
@@ -198,7 +221,7 @@ public static class GameRoutes
         return;
       }
 
-      if (game.PlayerRoundInfo.First().Player!.Id != playerId)
+      if (!IsCaptain(game, FindRequestingPlayer(game, playerToken)))
       {
         httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
         return;
@@ -224,9 +247,9 @@ public static class GameRoutes
         db.Rounds.AddRange(game.PlayerRoundInfo.Select(x => x.Rounds!.Last()).Where(x => x != addedRound));
         db.PlayerRoundInfos.UpdateRange(game.PlayerRoundInfo.Where(x => x != addedPlayerRound));
         db.Games.Update(game);
-        await UpdateHashAndSaveAsync(db, game);
+        var startedGameHash = await UpdateHashAndSaveAsync(db, game);
 
-        await httpContext.Response.WriteAsJsonAsync(game);
+        await httpContext.Response.WriteAsJsonAsync(game.MapToDto(startedGameHash));
       }
       catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
       {
@@ -236,7 +259,7 @@ public static class GameRoutes
     .WithName("StartGame")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}/reset", async (GameId id, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapPost("/games/{id}/reset", async (GameId id, string knownHash, [FromHeader(Name = PlayerTokenHeader)] string? playerToken, HttpContext httpContext, SkullKingDbContext db) =>
     {
       // Check the knownHash compared to current stored hash
       // Do not allow updates if the user's hash doesn't match the current hash
@@ -254,7 +277,7 @@ public static class GameRoutes
         return;
       }
 
-      if (game.PlayerRoundInfo.First().Player!.Id != playerId)
+      if (!IsCaptain(game, FindRequestingPlayer(game, playerToken)))
       {
         httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
         return;
@@ -296,7 +319,7 @@ public static class GameRoutes
     .RequireCors(cors);
 
 
-    app.MapPut("/games/{id}/players/reorder", async (GameId id, PlayerOrderDto playerOrderDto, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapPut("/games/{id}/players/reorder", async (GameId id, PlayerOrderDto playerOrderDto, [FromHeader(Name = PlayerTokenHeader)] string? playerToken, HttpContext httpContext, SkullKingDbContext db) =>
     {
       // Check the knownHash compared to current stored hash
       // Do not allow updates if the user's hash doesn't match the current hash
@@ -314,7 +337,7 @@ public static class GameRoutes
         return;
       }
 
-      if (game.PlayerRoundInfo.First().Player!.Id != playerOrderDto.PlayerId)
+      if (!IsCaptain(game, FindRequestingPlayer(game, playerToken)))
       {
         httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
         return;
@@ -325,8 +348,6 @@ public static class GameRoutes
         game.SetPlayerOrder(playerOrderDto.PlayerOrder);
         db.Games.Update(game);
         await UpdateHashAndSaveAsync(db, game);
-
-        var gameAfterUpdate = await GetFullGame(id, db);
       }
       catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
       {
@@ -336,16 +357,17 @@ public static class GameRoutes
     .WithName("ReorderPlayers")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}/movenext", async (GameId id, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapPost("/games/{id}/movenext", async (GameId id, string knownHash, [FromHeader(Name = PlayerTokenHeader)] string? playerToken, HttpContext httpContext, SkullKingDbContext db, ILoggerFactory loggerFactory) =>
     {
-      var game = await GetFullGame(id, db);
+      var logger = loggerFactory.CreateLogger("GameRoutes");
+      var game = await GetFullGame(id, db, logger);
       if (game is null)
       {
         httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
         return;
       }
 
-      if (game.PlayerRoundInfo.First().Player!.Id != playerId)
+      if (!IsCaptain(game, FindRequestingPlayer(game, playerToken)))
       {
         httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
         return;
@@ -356,6 +378,7 @@ public static class GameRoutes
       var currentHash = db.Hashes.Find(id.Value);
       if (currentHash?.Value != knownHash)
       {
+        LogStaleHash(logger, httpContext, id, knownHash, currentHash?.Value, game);
         httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
         return;
       }
@@ -371,22 +394,24 @@ public static class GameRoutes
       }
       catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
       {
+        LogRejectedChange(logger, ex, "movenext", id, game);
         httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
       }
     })
     .WithName("MoveToNextPhase")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}/moveprevious", async (GameId id, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapPost("/games/{id}/moveprevious", async (GameId id, string knownHash, [FromHeader(Name = PlayerTokenHeader)] string? playerToken, HttpContext httpContext, SkullKingDbContext db, ILoggerFactory loggerFactory) =>
     {
-      var game = await GetFullGame(id, db);
+      var logger = loggerFactory.CreateLogger("GameRoutes");
+      var game = await GetFullGame(id, db, logger);
       if (game is null)
       {
         httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
         return;
       }
 
-      if (game.PlayerRoundInfo.First().Player!.Id != playerId)
+      if (!IsCaptain(game, FindRequestingPlayer(game, playerToken)))
       {
         httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
         return;
@@ -397,6 +422,7 @@ public static class GameRoutes
       var currentHash = db.Hashes.Find(id.Value);
       if (currentHash?.Value != knownHash)
       {
+        LogStaleHash(logger, httpContext, id, knownHash, currentHash?.Value, game);
         httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
         return;
       }
@@ -412,26 +438,35 @@ public static class GameRoutes
       }
       catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
       {
+        LogRejectedChange(logger, ex, "moveprevious", id, game);
         httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
       }
     })
     .WithName("MoveToPreviousPhase")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}/setbid", async (GameId id, int bid, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapPost("/games/{id}/setbid", async (GameId id, int bid, Guid playerId, string knownHash, [FromHeader(Name = PlayerTokenHeader)] string? playerToken, HttpContext httpContext, SkullKingDbContext db, ILoggerFactory loggerFactory) =>
     {
-      var game = await GetFullGame(id, db);
+      var logger = loggerFactory.CreateLogger("GameRoutes");
+      var game = await GetFullGame(id, db, logger);
       if (game is null)
       {
         httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
         return;
       }
 
-      var playerRoundInfo = game.PlayerRoundInfo.SingleOrDefault(x => x.Player!.Id == playerId);
-
-      if (playerRoundInfo is null)
+      // A player sets their own bid and score; the captain may set anyone's
+      var requestingPlayer = FindRequestingPlayer(game, playerToken);
+      if (requestingPlayer is null || (requestingPlayer.Id != playerId && !IsCaptain(game, requestingPlayer)))
       {
         httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return;
+      }
+
+      var playerRoundInfo = game.PlayerRoundInfo.SingleOrDefault(x => x.Player!.Id == playerId);
+      if (playerRoundInfo is null)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
         return;
       }
 
@@ -440,6 +475,7 @@ public static class GameRoutes
       var currentHash = db.Hashes.Find(id.Value);
       if (currentHash?.Value != knownHash)
       {
+        LogStaleHash(logger, httpContext, id, knownHash, currentHash?.Value, game);
         httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
         return;
       }
@@ -454,26 +490,35 @@ public static class GameRoutes
       }
       catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
       {
+        LogRejectedChange(logger, ex, "setbid", id, game);
         httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
       }
     })
     .WithName("SetBid")
     .RequireCors(cors);
 
-    app.MapGet("/games/{id}/setscore", async (GameId id, int tricksTaken, int bonus, Guid playerId, string knownHash, HttpContext httpContext, SkullKingDbContext db) =>
+    app.MapPost("/games/{id}/setscore", async (GameId id, int tricksTaken, int bonus, Guid playerId, string knownHash, [FromHeader(Name = PlayerTokenHeader)] string? playerToken, HttpContext httpContext, SkullKingDbContext db, ILoggerFactory loggerFactory) =>
     {
-      var game = await GetFullGame(id, db);
+      var logger = loggerFactory.CreateLogger("GameRoutes");
+      var game = await GetFullGame(id, db, logger);
       if (game is null)
       {
         httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
         return;
       }
 
-      var playerRoundInfo = game.PlayerRoundInfo.SingleOrDefault(x => x.Player!.Id == playerId);
-
-      if (playerRoundInfo is null)
+      // A player sets their own bid and score; the captain may set anyone's
+      var requestingPlayer = FindRequestingPlayer(game, playerToken);
+      if (requestingPlayer is null || (requestingPlayer.Id != playerId && !IsCaptain(game, requestingPlayer)))
       {
         httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return;
+      }
+
+      var playerRoundInfo = game.PlayerRoundInfo.SingleOrDefault(x => x.Player!.Id == playerId);
+      if (playerRoundInfo is null)
+      {
+        httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
         return;
       }
 
@@ -482,6 +527,7 @@ public static class GameRoutes
       var currentHash = db.Hashes.Find(id.Value);
       if (currentHash?.Value != knownHash)
       {
+        LogStaleHash(logger, httpContext, id, knownHash, currentHash?.Value, game);
         httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
         return;
       }
@@ -495,6 +541,7 @@ public static class GameRoutes
       }
       catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
       {
+        LogRejectedChange(logger, ex, "setscore", id, game);
         httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
       }
     })
@@ -512,10 +559,28 @@ public static class GameRoutes
       await httpContext.Response.WriteAsync(db.Games.First().Id);
     })
     .WithName("GetSingleGameId")
+    .RequireRateLimiting(RateLimits.GameRead)
     .RequireCors(cors);
   }
 
-  private static async Task<Game?> GetFullGame(GameId gameId, SkullKingDbContext db)
+  private static Player? FindRequestingPlayer(Game game, string? playerToken)
+  {
+    if (string.IsNullOrEmpty(playerToken))
+      return null;
+
+    return game.PlayerRoundInfo
+      .Select(x => x.Player!)
+      .FirstOrDefault(x => x.HasToken(playerToken));
+  }
+
+  // The captain is the first seat. GetFullGame restores seat order after loading
+  // (SortPlayersAndRounds), so this holds however the store returns the rows.
+  private static bool IsCaptain(Game game, Player? player)
+  {
+    return player is not null && game.PlayerRoundInfo.First().Player!.Id == player.Id;
+  }
+
+  private static async Task<Game?> GetFullGame(GameId gameId, SkullKingDbContext db, ILogger? logger = null)
   {
     // Normalize the GameId so users who typed O or I 
     // instead of 0 or 1 can still get the game
@@ -529,10 +594,42 @@ public static class GameRoutes
       .Where(x => x.Id == gameId.Value)
       .FirstOrDefaultAsync();
 
+    // The database does not preserve the order rows were written in, so restore
+    // seating and round order before anything reads them positionally.
+    if (game?.SortPlayersAndRounds() == true)
+    {
+      logger?.LogInformation(
+        "Game {GameId} came back from the database out of order and was resorted.",
+        gameId.Value);
+    }
+
     return game;
   }
 
-  private static async Task UpdateHashAndSaveAsync(SkullKingDbContext db, Game game)
+  // A caller whose hash never matches can never change anything again, so make
+  // that visible rather than letting it look like an ordinary retry.
+  private static void LogStaleHash(ILogger logger, HttpContext httpContext, GameId id, string knownHash, string? currentHash, Game game)
+  {
+    logger.LogWarning(
+      "Rejected {Route} for game {GameId} as out of date: caller had {KnownHash}, stored is {CurrentHash}. Game is {Status} on round {Round}.",
+      httpContext.Request.Path, id.Value, knownHash, currentHash ?? "(none)",
+      game.Status, game.PlayerRoundInfo.FirstOrDefault()?.Rounds?.Count);
+  }
+
+  // A rejected change is where a game gets wedged, and the caller only sees a
+  // bare 400. Write down enough of the game to work out why afterwards.
+  private static void LogRejectedChange(ILogger logger, Exception ex, string change, GameId id, Game game)
+  {
+    var rounds = string.Join(" | ", game.PlayerRoundInfo.Select(playerRounds =>
+      $"{playerRounds.Player?.Name}: " + string.Join(",", playerRounds.Rounds!.Select(round =>
+        $"r{round.Number}(max {round.MaxBid}, bid {round.Bid?.ToString() ?? "-"}, took {round.TricksTaken?.ToString() ?? "-"}, bonus {round.Bonus?.ToString() ?? "-"})"))));
+
+    logger.LogError(ex,
+      "Rejected {Change} for game {GameId}. Game is {Status} with {PlayerCount} players. Rounds: {Rounds}",
+      change, id.Value, game.Status, game.PlayerRoundInfo.Count, rounds);
+  }
+
+  private static async Task<string> UpdateHashAndSaveAsync(SkullKingDbContext db, Game game)
   {
     var gameHash = game.GetHashCode().ToString();
     var existingHash = await db.Hashes.FindAsync(game.Id);
@@ -547,5 +644,7 @@ public static class GameRoutes
     }
 
     await db.SaveChangesAsync();
+
+    return gameHash;
   }
 }
