@@ -6,7 +6,8 @@ A dictionary of the domain terms used across the Skull King app, in both the C# 
 
 - **Game** — the aggregate root for one play session. Holds the player list, a `Status`, and game options (`IsRandomBid`, `Difficulty`, `ExpansionEnabled`). A game runs exactly **10 rounds** and is identified by a [Game ID](#game-id).
 - **Game ID** — a short, human-friendly code used to find/join a game (e.g. `ABCD`). Normalizes look-alike characters so a typed `O`/`I` resolves to `0`/`1`. The names `__Sample Game 1__` / `__Sample Game 2__` force the fixed IDs `ABCD` / `1234` for testing.
-- **Player** — a participant, identified by a `Guid` and a display name.
+- **Player** — a participant, identified by a public `Guid` and a display name. Everyone in the game can see the `Guid`.
+- **Player Token** — a player's secret: 128 random bits handed only to the device that created or joined with that seat, kept in that browser's `localStorage`, and sent as the `X-Player-Token` header with every game action. The server authorizes actions against it, never against the public `Guid`, and never includes it in a `GameDto`. See [ARCHITECTURE.md](ARCHITECTURE.md#authorizing-game-actions).
 - **Captain** — the **first player** in the game's player list (the game's owner/creator). Only the captain can start the game, add/remove other players, and reorder players. The captain cannot leave while other players remain ("cannot abandon ship").
 - **Ghost Player** — an auto-added filler player named `"Ghost Player"`, inserted when [Random Bid](#random-bid-mode) mode is started with fewer than 3 players (random bid needs at least 3).
 - **Round** — one of the 10 rounds within a game. Each round has a [Max Bid](#max-bid), plus a player's [Bid](#bid), [Tricks Taken](#tricks-taken), and [Bonus](#bonus).

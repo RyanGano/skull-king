@@ -5,7 +5,7 @@ import { calculateRoundScore } from "../PlayerStatusCard/utils";
 
 import "./PlayArea.less";
 import { GameSetBidUri, GameSetScoreUri } from "../../service-paths";
-import { callGetRoute } from "../../utils/api-utils";
+import { callPostRoute } from "../../utils/api-utils";
 import { useCallback, useEffect, useState } from "react";
 import { Spinner } from "react-bootstrap";
 import { TutorialContext } from "../../TutorialContext";
@@ -13,6 +13,7 @@ import { TutorialContext } from "../../TutorialContext";
 interface PlayAreaProps {
   game: Game;
   me: Player;
+  playerToken?: string;
   moveToNextGameStatus: (hash?: string) => Promise<void>;
   moveToPreviousGameStatus: (hash?: string) => Promise<void>;
   gameChanging: boolean;
@@ -26,6 +27,7 @@ export const PlayArea = (props: PlayAreaProps) => {
   const {
     game,
     me,
+    playerToken,
     moveToNextGameStatus,
     moveToPreviousGameStatus,
     gameChanging,
@@ -55,8 +57,10 @@ export const PlayArea = (props: PlayAreaProps) => {
 
       setChangingGame(true);
       // Attempt to update the bid
-      const result = await callGetRoute(
+      const result = await callPostRoute(
         GameSetBidUri(game.id, playerId, bid, hash ?? game.hash),
+        undefined,
+        playerToken,
       );
 
       if (result.status !== 200) {
@@ -74,7 +78,7 @@ export const PlayArea = (props: PlayAreaProps) => {
         setChangingGame(false);
       }
     },
-    [game, getCurrentHash],
+    [game, getCurrentHash, playerToken],
   );
 
   const changeScore = useCallback(
@@ -91,7 +95,7 @@ export const PlayArea = (props: PlayAreaProps) => {
 
       setChangingGame(true);
       // Attempt to update the game score
-      const result = await callGetRoute(
+      const result = await callPostRoute(
         GameSetScoreUri(
           game.id,
           playerId,
@@ -99,6 +103,8 @@ export const PlayArea = (props: PlayAreaProps) => {
           bonus,
           hash ?? game.hash,
         ),
+        undefined,
+        playerToken,
       );
 
       if (result.status !== 200) {
@@ -116,7 +122,7 @@ export const PlayArea = (props: PlayAreaProps) => {
         setChangingGame(false);
       }
     },
-    [game, getCurrentHash],
+    [game, getCurrentHash, playerToken],
   );
 
   const gameState =

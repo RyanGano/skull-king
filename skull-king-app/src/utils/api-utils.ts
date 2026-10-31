@@ -1,4 +1,13 @@
-import axios, { AxiosError } from "axios";
+import axios, { AxiosError, type AxiosRequestConfig } from "axios";
+
+// Game actions are authorized by the acting player's own secret token, which
+// the server checks against this header. See utils/player-token.ts.
+export const PlayerTokenHeader = "X-Player-Token";
+
+const withPlayerToken = (
+  playerToken?: string,
+): AxiosRequestConfig | undefined =>
+  playerToken ? { headers: { [PlayerTokenHeader]: playerToken } } : undefined;
 
 export const callGetRoute = async (uri: string) => {
   try {
@@ -19,9 +28,17 @@ export const callGetRoute = async (uri: string) => {
   }
 };
 
-export const callPostRoute = async (uri: string, postData: JSON) => {
+export const callPostRoute = async (
+  uri: string,
+  postData?: JSON,
+  playerToken?: string,
+) => {
   try {
-    const result = await axios.post(uri, postData);
+    const result = await axios.post(
+      uri,
+      postData,
+      withPlayerToken(playerToken),
+    );
 
     return {
       data: result.data,
@@ -46,9 +63,13 @@ export const callPostRoute = async (uri: string, postData: JSON) => {
   }
 };
 
-export const callPutRoute = async (uri: string, putData: JSON) => {
+export const callPutRoute = async (
+  uri: string,
+  putData: JSON,
+  playerToken?: string,
+) => {
   try {
-    const result = await axios.put(uri, putData);
+    const result = await axios.put(uri, putData, withPlayerToken(playerToken));
 
     return {
       data: result.data,
@@ -73,9 +94,9 @@ export const callPutRoute = async (uri: string, putData: JSON) => {
   }
 };
 
-export const callDeleteRoute = async (uri: string) => {
+export const callDeleteRoute = async (uri: string, playerToken?: string) => {
   try {
-    const result = await axios.delete(uri);
+    const result = await axios.delete(uri, withPlayerToken(playerToken));
 
     return {
       data: result.data,
