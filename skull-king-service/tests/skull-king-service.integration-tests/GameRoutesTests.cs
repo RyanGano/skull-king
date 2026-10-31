@@ -245,7 +245,7 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
     responseContent = await response.Content.ReadAsStringAsync();
-    responsePlayer = JsonSerializer.Deserialize<PlayerDto>(responseContent, _JsonSerializerOptions);
+    var responsePlayer = JsonSerializer.Deserialize<PlayerDto>(responseContent, _JsonSerializerOptions);
 
     Assert.Equal("Updated Name", responsePlayer?.Name);
     Assert.Equal(playerId, responsePlayer?.Id);
@@ -498,15 +498,6 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     var responseGame = JsonSerializer.Deserialize<CreatedGameDto>(responseContent, _JsonSerializerOptions);
 
     return responseGame;
-  }
-
-  private async Task<JoinedPlayerDto> JoinGame(string gameId, string playerName)
-  {
-    var response = await _client.PutAsync($"/games/{gameId}/players", JsonContent.Create(new PlayerDto { Name = playerName }));
-    response.EnsureSuccessStatusCode();
-
-    var responseContent = await response.Content.ReadAsStringAsync();
-    return JsonSerializer.Deserialize<JoinedPlayerDto>(responseContent, _JsonSerializerOptions)!;
   }
 
   private Task<HttpResponseMessage> PostAs(string? playerToken, string uri)
