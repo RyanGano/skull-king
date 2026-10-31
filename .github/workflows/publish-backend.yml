@@ -29,6 +29,8 @@ concurrency:
 
 jobs:
   build_api:
+    # Closing a PR needs no build
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: windows-latest
 
     steps:
@@ -58,6 +60,9 @@ jobs:
           path: "${{env.DOTNET_ROOT}}/myapp"
 
   deploy_api:
+    # Only main reaches production. A pull request builds and tests but never
+    # deploys, and Dependabot runs get no repository secrets to deploy with.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && github.actor != 'dependabot[bot]'
     runs-on: windows-latest
     needs: build_api
     environment:
