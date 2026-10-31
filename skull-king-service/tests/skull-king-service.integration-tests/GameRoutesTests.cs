@@ -67,6 +67,37 @@ public class GameRoutesTests : IClassFixture<TestFixture>
     Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
   }
 
+  [Theory]
+  [InlineData(true)]
+  [InlineData(false)]
+  public async Task CreateGameKeepsTheExpansionSetting(bool expansionEnabled)
+  {
+    var response = await _client.PostAsync("/games", JsonContent.Create(new NewGameDto { PlayerName = "Captain", ExpansionEnabled = expansionEnabled }));
+    Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+    var created = JsonSerializer.Deserialize<CreatedGameDto>(await response.Content.ReadAsStringAsync(), _JsonSerializerOptions);
+    Assert.Equal(expansionEnabled, created?.ExpansionEnabled);
+
+    var game = GetGame(created!.Id!);
+    Assert.Equal(expansionEnabled, game.ExpansionEnabled);
+  }
+
+  [Fact]
+  public async Task ChangingAGameRecordsActivity()
+  {
+    var before = DateTimeOffset.UtcNow;
+    var createdGame = await CreateNewGame("Captain");
+
+    var game = GetGame(createdGame!.Id!);
+    Assert.InRange(game.LastActivityUtc, before, DateTimeOffset.UtcNow);
+
+    var created = game.LastActivityUtc;
+    await _client.PutAsync($"/games/{createdGame.Id}/players", JsonContent.Create(new PlayerDto { Name = "Mate" }));
+
+    game = GetGame(createdGame.Id!);
+    Assert.True(game.LastActivityUtc >= created);
+  }
+
   [Fact]
   public async Task CanRetrieveGameWithValidId()
   {

@@ -9,6 +9,8 @@ builder.Services.AddDbContext<SkullKingDbContext>(options =>
 
 SetupCors(AllowSkullKingApp, builder);
 builder.Services.AddGameRateLimits();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddHostedService<GameCleanupService>();
 
 var app = builder.Build();
 app.UseCors(AllowSkullKingApp);

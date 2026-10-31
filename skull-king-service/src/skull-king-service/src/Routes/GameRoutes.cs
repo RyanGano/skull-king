@@ -12,27 +12,38 @@ public static class GameRoutes
   {
     app.MapPost("/games", async (NewGameDto gameInfo, HttpContext httpContext, SkullKingDbContext db) =>
     {
-      // We may want to setup a specific game ID for testing purposes
-      var gameId = gameInfo.PlayerName == "__Sample Game 1__"
-        ? new GameId("ABCD")
-        : gameInfo.PlayerName == "__Sample Game 2__"
-        ? new GameId("1234")
-        : new GameId();
-
-      var existingGame = await db.Games.Where(x => x.Id == gameId.Value).FirstOrDefaultAsync();
-      if (existingGame is not null)
+      // The sample names force a fixed game ID for testing; those cannot be
+      // retried, so a second sample game is still a conflict
+      var sampleGameId = gameInfo.PlayerName switch
       {
-        httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
-        return;
+        "__Sample Game 1__" => new GameId("ABCD"),
+        "__Sample Game 2__" => new GameId("1234"),
+        _ => null,
+      };
+
+      Task<bool> IsTaken(GameId candidate) => db.Games.AnyAsync(x => x.Id == candidate.Value);
+
+      GameId? gameId;
+      if (sampleGameId is not null)
+      {
+        gameId = await IsTaken(sampleGameId) ? null : sampleGameId;
+        if (gameId is null)
+        {
+          httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
+          return;
+        }
+      }
+      else
+      {
+        gameId = await GameIdAllocator.FindUnusedAsync(() => new GameId(), IsTaken);
+        if (gameId is null)
+        {
+          httpContext.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+          return;
+        }
       }
 
-      var game = Game.Create(gameId, new Player(gameInfo.PlayerName));
-      // Set expansion flag from DTO (use internal method if available)
-      var expansionProp = game.GetType().GetProperty("ExpansionEnabled");
-      if (expansionProp is not null)
-      {
-        expansionProp.SetValue(game, gameInfo.ExpansionEnabled);
-      }
+      var game = Game.Create(gameId, new Player(gameInfo.PlayerName), gameInfo.ExpansionEnabled);
       db.Players.Add(game.PlayerRoundInfo.Single().Player!);
       db.Rounds.AddRange(game.PlayerRoundInfo.SelectMany(x => x.Rounds!));
       db.PlayerRoundInfos.Add(game.PlayerRoundInfo.Single());
@@ -631,6 +642,7 @@ public static class GameRoutes
 
   private static async Task<string> UpdateHashAndSaveAsync(SkullKingDbContext db, Game game)
   {
+    game.MarkActivity(DateTimeOffset.UtcNow);
     var gameHash = game.GetHashCode().ToString();
     var existingHash = await db.Hashes.FindAsync(game.Id);
     if (existingHash is not null)

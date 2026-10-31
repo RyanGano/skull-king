@@ -39,6 +39,8 @@ A scoring app for the [Skull King](https://www.grandpabecksgames.com/pages/skull
 
 Minimal API; all routes registered in `src/Routes/GameRoutes.cs` via `GameRoutes.Register(app, cors)`. Persistence is **EF Core InMemory** (`SkullKingDbContext`) — there is no real database; all game state is lost on restart. This is intentional for a transient, single-server game tracker.
 
+Every change stamps the game's `LastActivityUtc` (in `UpdateHashAndSaveAsync`; not part of the hash). `GameCleanupService` (`src/Services/GameCleanup.cs`) sweeps every 15 minutes and removes games idle for more than 24 hours, with their players, rounds and hash (`GameCleanup:IdleHours` / `GameCleanup:IntervalMinutes` override). New game ids are drawn until a free one is found (`GameIdAllocator`, up to 10 tries, then 503); only the fixed sample ids still return 409 when taken.
+
 Because state is in-memory, the App Service must stay warm or in-progress games are lost. An external **UptimeRobot** monitor pings the warmup route (`/`, supports GET and HEAD) every ~5 minutes to prevent idle recycles. Platform restarts/deploys still wipe all games; the client tolerates brief outages (see frontend notes below) but cannot recover a wiped game.
 
 ### Domain model (`src/Game/`)
@@ -90,4 +92,6 @@ Both halves deploy from `main` via GitHub Actions, each gated on its own path fi
 - `.github/workflows/publish-frontend.yml` — `yarn install && yarn build`, then Azure Static Web Apps deploy. Also handles PR preview/close.
 - `.github/workflows/publish-backend.yml` — `dotnet build` + run both test projects + `dotnet publish`, then Azure App Service deploy (`skull-king-api`). Azure credentials are GitHub secrets. Pull requests build and test only; the deploy job runs for `main` alone (and never for Dependabot, which gets no secrets).
 
-Because the workflows are path-filtered, a change touching only one half only runs/deploys that half.
+Because the workflows are path-filtered, a change touching only one half only runs/deploys that half. `Directory.Packages.props` (central NuGet versions, at the repo root) is in the backend filter.
+
+Dependabot (`.github/dependabot.yml`) opens weekly PRs for npm (`skull-king-app`), NuGet and GitHub Actions, one group for minor+patch and one for major per ecosystem. Dependabot runs get no repository secrets, so both workflows skip their deploy steps for it and still build (and, for the backend, test) on the runner.

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 public record Game
 {
@@ -26,17 +27,27 @@ public record Game
     };
   }
 
-  public static Game Create(GameId gameId, Player controllingPlayer)
+  public static Game Create(GameId gameId, Player controllingPlayer, bool expansionEnabled = false)
   {
     return new Game
     {
       Id = gameId.Value,
       EditablePlayerRoundInfo = [PlayerRounds.Create(controllingPlayer)],
-      ExpansionEnabled = false,
+      ExpansionEnabled = expansionEnabled,
     };
   }
 
   public bool ExpansionEnabled { get; private set; }
+
+  // When the game last changed. Idle games are removed by GameCleanupService.
+  // Not part of the game's state, so it is left out of the hash.
+  [JsonIgnore]
+  public DateTimeOffset LastActivityUtc { get; private set; }
+
+  public void MarkActivity(DateTimeOffset now)
+  {
+    LastActivityUtc = now;
+  }
 
   public PlayerRounds AddPlayer(Player player)
   {
