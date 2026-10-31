@@ -1,0 +1,47 @@
+# Weekly dependency updates. Each ecosystem gets one PR for minor and patch
+# updates together and one for major updates, so majors can be reviewed on
+# their own.
+#
+# Dependabot PRs get no repository secrets, so the workflows build and test
+# them but skip every deploy step (see publish-frontend.yml and
+# publish-backend.yml).
+version: 2
+updates:
+  - package-ecosystem: "npm" # also handles yarn.lock
+    directory: "/skull-king-app"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+      npm-major:
+        update-types:
+          - "major"
+
+  - package-ecosystem: "nuget" # Directory.Packages.props
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      nuget-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+      nuget-major:
+        update-types:
+          - "major"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+      actions-major:
+        update-types:
+          - "major"

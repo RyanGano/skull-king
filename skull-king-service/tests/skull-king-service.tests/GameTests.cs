@@ -485,4 +485,39 @@ public class GameTests
   }
 
   private static Random s_rand = new Random();
+
+  [Fact]
+  public void ExpansionIsOffByDefault()
+  {
+    var game = Game.Create(new GameId("ABCD"), new Player("Ryan"));
+
+    Assert.False(game.ExpansionEnabled);
+  }
+
+  [Theory]
+  [InlineData(false, 8)]
+  [InlineData(true, 9)]
+  public void ExpansionSetsTheMaximumNumberOfPlayers(bool expansionEnabled, int maxPlayers)
+  {
+    var game = Game.Create(new GameId("ABCD"), new Player("Player 1"), expansionEnabled);
+
+    Assert.Equal(expansionEnabled, game.ExpansionEnabled);
+
+    for (var i = 2; i <= maxPlayers; i++)
+      game.AddPlayer(new Player($"Player {i}"));
+
+    Assert.Equal(maxPlayers, game.PlayerRoundInfo.Count);
+    Assert.Throws<ArgumentException>(() => game.AddPlayer(new Player("One Too Many")));
+  }
+
+  [Fact]
+  public void LastActivityIsNotPartOfTheHash()
+  {
+    var game = Game.Create(new GameId("ABCD"), new Player("Ryan"));
+    var hash = game.GetHashCode();
+
+    game.MarkActivity(DateTimeOffset.UtcNow);
+
+    Assert.Equal(hash, game.GetHashCode());
+  }
 }
